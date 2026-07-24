@@ -22,6 +22,9 @@ public:
     std::vector<std::string> words;
     std::ifstream file(this->path);
 
+    if (file.fail())
+      return -1;
+
     while (std::getline(file, line)) {
       if (line.empty())
         continue;
