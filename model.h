@@ -48,8 +48,6 @@ public:
     return 0;
   };
 
-  int unload() { return 0; };
-
 private:
   void split(const std::string &s, char delim,
              std::vector<std::string> &elems) {
