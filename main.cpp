@@ -38,6 +38,13 @@ void line(int ax, int ay, int bx, int by, TGAImage &framebuf, TGAColor color) {
   }
 }
 
+void triangle(int ax, int ay, int bx, int by, int cx, int cy,
+              TGAImage &framebuffer, TGAColor color) {
+  line(ax, ay, bx, by, framebuffer, color);
+  line(bx, by, cx, cy, framebuffer, color);
+  line(cx, cy, ax, ay, framebuffer, color);
+}
+
 std::tuple<int, int> project(std::array<double, 3> vector) {
   return {(vector[0] + 1.) * width / 2, (vector[1] + 1.) * height / 2};
 }
@@ -53,9 +60,7 @@ int main(int argc, char **argv) {
     auto [bx, by] = project(m.vertices[face->at(1)]);
     auto [cx, cy] = project(m.vertices[face->at(2)]);
 
-    line(ax, ay, bx, by, framebuffer, red);
-    line(bx, by, cx, cy, framebuffer, red);
-    line(cx, cy, ax, ay, framebuffer, red);
+    triangle(ax, ay, bx, by, cx, cy, framebuffer, red);
   }
 
   framebuffer.write_tga_file("framebuffer.tga");
