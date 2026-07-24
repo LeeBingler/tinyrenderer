@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -11,7 +12,7 @@ class Model {
 public:
   std::string path;
   std::vector<std::array<double, 3>> vertices;
-  std::vector<std::string> face;
+  std::vector<std::array<int, 3>> face;
 
   Model(std::string path) : path(path) {};
   ~Model() {};
@@ -24,13 +25,23 @@ public:
     while (std::getline(file, line)) {
       if (line.empty())
         continue;
-      words = split(line, ' ');
+      words = this->split(line, ' ');
 
       if (words[0] == "v") {
         std::array<double, 3> vertice = {
             std::stod(words[1]), std::stod(words[2]), std::stod(words[3])};
 
         vertices.push_back(vertice);
+
+      } else if (words[0] == "f") {
+        std::array<int, 3> face_index;
+
+        for (unsigned int i = 1; i < words.size(); i++) {
+          std::vector<std::string> values = this->split(words[i], '/');
+          face_index[i - 1] = std::stoi(values[0]);
+        }
+
+        face.push_back(face_index);
       }
     };
 
