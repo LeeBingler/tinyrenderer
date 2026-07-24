@@ -38,7 +38,7 @@ public:
 
         for (unsigned int i = 1; i < words.size(); i++) {
           std::vector<std::string> values = this->split(words[i], '/');
-          face_index[i - 1] = std::stoi(values[0]);
+          face_index[i - 1] = std::stoi(values[0]) - 1;
         }
 
         face.push_back(face_index);
