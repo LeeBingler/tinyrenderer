@@ -14,10 +14,10 @@ public:
     std::string line;
     std::ifstream file(this->path);
 
-    std::getline(file, line);
-
-    std::cout << this->path << std::endl;
-    std::cout << line << std::endl;
+    while (std::getline(file, line)) {
+      std::cout << this->path << std::endl;
+      std::cout << line << std::endl;
+    };
 
     return 0;
   };
