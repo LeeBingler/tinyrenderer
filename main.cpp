@@ -9,6 +9,9 @@ constexpr TGAColor red = {0, 0, 255, 255};
 constexpr TGAColor blue = {255, 128, 64, 255};
 constexpr TGAColor yellow = {0, 200, 255, 255};
 
+constexpr int width = 800;
+constexpr int height = 800;
+
 void line(int ax, int ay, int bx, int by, TGAImage &framebuf, TGAColor color) {
   bool steep = std::abs(ax - bx) < std::abs(ay - by);
   if (steep) { // if the line is steep, we transpose the image
@@ -35,30 +38,26 @@ void line(int ax, int ay, int bx, int by, TGAImage &framebuf, TGAColor color) {
   }
 }
 
+std::tuple<int, int> project(std::array<double, 3> vector) {
+  return {(vector[0] + 1.) * width / 2, (vector[1] + 1.) * height / 2};
+}
+
 int main(int argc, char **argv) {
-  constexpr int width = 800;
-  constexpr int height = 800;
   TGAImage framebuffer(width, height, TGAImage::RGB);
-
-  /*
-  int ax = 7, ay = 3;
-  int bx = 12, by = 37;
-  int cx = 62, cy = 53;
-
-  line(ax, ay, bx, by, framebuffer, blue);
-  line(cx, cy, bx, by, framebuffer, green);
-  line(cx, cy, ax, ay, framebuffer, yellow);
-  line(ax, ay, cx, cy, framebuffer, red);
-
-  framebuffer.set(ax, ay, white);
-  framebuffer.set(bx, by, white);
-  framebuffer.set(cx, cy, white);
-
-  framebuffer.write_tga_file("framebuffer.tga");
-  */
 
   Model m(argv[1]);
   m.load();
 
+  for (auto face = m.face.begin(); face != m.face.end(); face++) {
+    auto [ax, ay] = project(m.vertices[face->at(0)]);
+    auto [bx, by] = project(m.vertices[face->at(1)]);
+    auto [cx, cy] = project(m.vertices[face->at(2)]);
+
+    line(ax, ay, bx, by, framebuffer, red);
+    line(bx, by, cx, cy, framebuffer, red);
+    line(cx, cy, ax, ay, framebuffer, red);
+  }
+
+  framebuffer.write_tga_file("framebuffer.tga");
   return 0;
 }
