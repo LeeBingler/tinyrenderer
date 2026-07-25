@@ -1,5 +1,6 @@
 #include "model.h"
 #include "tgaimage.h"
+#include <algorithm>
 #include <cmath>
 #include <utility>
 
@@ -49,10 +50,8 @@ std::tuple<int, int> project(std::array<double, 3> vector) {
   return {(vector[0] + 1.) * width / 2, (vector[1] + 1.) * height / 2};
 }
 
-int main(int argc, char **argv) {
-  TGAImage framebuffer(width, height, TGAImage::RGB);
-
-  Model m(argv[1]);
+void writeWireframe(char *file, TGAImage *framebuffer) {
+  Model m(file);
   m.load();
 
   for (auto face = m.face.begin(); face != m.face.end(); face++) {
@@ -60,8 +59,63 @@ int main(int argc, char **argv) {
     auto [bx, by] = project(m.vertices[face->at(1)]);
     auto [cx, cy] = project(m.vertices[face->at(2)]);
 
-    triangle(ax, ay, bx, by, cx, cy, framebuffer, red);
+    triangle(ax, ay, bx, by, cx, cy, *framebuffer, red);
   }
+}
+
+double signed_triangle_area(int ax, int ay, int bx, int by, int cx, int cy) {
+  return .5 * ((by - ay) * (bx + ax) + (cy - by) * (cx + bx) +
+               (ay - cy) * (ax + cx));
+}
+
+void fillTriangle(int ax, int ay, int bx, int by, int cx, int cy,
+                  TGAImage &framebuffer, TGAColor color) {
+  int minX = std::min({ax, bx, cx});
+  int minY = std::min({ay, by, cy});
+
+  int maxX = std::max({ax, bx, cx});
+  int maxY = std::max({ay, by, cy});
+  double total_area = signed_triangle_area(ax, ay, bx, by, cx, cy);
+  if (total_area < 1)
+    return; // backface culling + discarding triangles that cover less than a
+            // pixel
+
+#pragma omp parallel for
+  for (int x = minX; x <= maxX; x++) {
+    for (int y = minY; y <= maxY; y++) {
+      double alpha = signed_triangle_area(x, y, bx, by, cx, cy) / total_area;
+      double beta = signed_triangle_area(x, y, cx, cy, ax, ay) / total_area;
+      double gamma = signed_triangle_area(x, y, ax, ay, bx, by) / total_area;
+
+      if (alpha < 0 || beta < 0 || gamma < 0)
+        continue; // negative barycentric coordinate => the pixel is outside the
+                  // triangle
+      framebuffer.set(x, y, color);
+    }
+  }
+}
+
+void writeFaces(char *file, TGAImage *framebuffer) {
+  Model m(file);
+  m.load();
+
+  for (auto face = m.face.begin(); face != m.face.end(); face++) {
+    auto [ax, ay] = project(m.vertices[face->at(0)]);
+    auto [bx, by] = project(m.vertices[face->at(1)]);
+    auto [cx, cy] = project(m.vertices[face->at(2)]);
+
+    TGAColor rnd;
+    for (int c = 0; c < 3; c++)
+      rnd[c] = std::rand() % 255;
+
+    fillTriangle(ax, ay, bx, by, cx, cy, *framebuffer, rnd);
+  }
+}
+
+int main(int argc, char **argv) {
+  TGAImage framebuffer(width, height, TGAImage::RGB);
+
+  writeFaces(argv[1], &framebuffer);
 
   framebuffer.write_tga_file("framebuffer.tga");
   return 0;
