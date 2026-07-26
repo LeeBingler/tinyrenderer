@@ -11,6 +11,19 @@ constexpr TGAColor yellow = {0, 200, 255, 255};
 constexpr int width = 800;
 constexpr int height = 800;
 
+vec3 rot(vec3 v) {
+  constexpr double a = M_PI / 6;
+  constexpr mat<3, 3> Ry = {{{std::cos(a), 0, std::sin(a)},
+                             {0, 1, 0},
+                             {-std::sin(a), 0, std::cos(a)}}};
+  return Ry * v;
+}
+
+vec3 persp(vec3 v) {
+  constexpr double c = 6.;
+  return v / (1 - v.z / c);
+}
+
 std::tuple<int, int, int> project(vec3 v) {
   // First of all, (x,y) is an orthogonal projection of the
   // vector (x,y,z).
@@ -69,9 +82,9 @@ int main(int argc, char **argv) {
   m.load();
 
   for (int i = 0; i < m.nfaces(); i++) {
-    auto [ax, ay, az] = project(m.vert(i, 0));
-    auto [bx, by, bz] = project(m.vert(i, 1));
-    auto [cx, cy, cz] = project(m.vert(i, 2));
+    auto [ax, ay, az] = project(persp(rot(m.vert(i, 0))));
+    auto [bx, by, bz] = project(persp(rot(m.vert(i, 1))));
+    auto [cx, cy, cz] = project(persp(rot(m.vert(i, 2))));
 
     TGAColor rnd;
     for (int c = 0; c < 3; c++)
