@@ -46,7 +46,7 @@ void triangle(int ax, int ay, int bx, int by, int cx, int cy,
   line(cx, cy, ax, ay, framebuffer, color);
 }
 
-std::tuple<int, int> project(std::array<double, 3> vector) {
+std::tuple<int, int> project(vec3 vector) {
   return {(vector[0] + 1.) * width / 2, (vector[1] + 1.) * height / 2};
 }
 
@@ -54,10 +54,10 @@ void writeWireframe(char *file, TGAImage *framebuffer) {
   Model m(file);
   m.load();
 
-  for (auto face = m.face.begin(); face != m.face.end(); face++) {
-    auto [ax, ay] = project(m.vertices[face->at(0)]);
-    auto [bx, by] = project(m.vertices[face->at(1)]);
-    auto [cx, cy] = project(m.vertices[face->at(2)]);
+  for (int i = 0; i < m.nfaces(); i++) {
+    auto [ax, ay] = project(m.vert(i, 0));
+    auto [bx, by] = project(m.vert(i, 1));
+    auto [cx, cy] = project(m.vert(i, 2));
 
     triangle(ax, ay, bx, by, cx, cy, *framebuffer, red);
   }
@@ -99,10 +99,10 @@ void writeFaces(char *file, TGAImage *framebuffer) {
   Model m(file);
   m.load();
 
-  for (auto face = m.face.begin(); face != m.face.end(); face++) {
-    auto [ax, ay] = project(m.vertices[face->at(0)]);
-    auto [bx, by] = project(m.vertices[face->at(1)]);
-    auto [cx, cy] = project(m.vertices[face->at(2)]);
+  for (int i = 0; i < m.nfaces(); i++) {
+    auto [ax, ay] = project(m.vert(i, 0));
+    auto [bx, by] = project(m.vert(i, 1));
+    auto [cx, cy] = project(m.vert(i, 2));
 
     TGAColor rnd;
     for (int c = 0; c < 3; c++)
@@ -118,6 +118,8 @@ int main(int argc, char **argv) {
   int ax = 17, ay = 4, az = 13;
   int bx = 55, by = 39, bz = 128;
   int cx = 23, cy = 59, cz = 255;
+
+  writeFaces(argv[1], &framebuffer);
 
   framebuffer.write_tga_file("framebuffer.tga");
   return 0;

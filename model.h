@@ -1,5 +1,7 @@
 #pragma once
 
+#include "geometry.h"
+#include <algorithm>
 #include <array>
 #include <cstdlib>
 #include <fstream>
@@ -12,11 +14,14 @@
 class Model {
 public:
   std::string path;
-  std::vector<std::array<double, 3>> vertices;
-  std::vector<std::array<int, 3>> face;
+  std::vector<vec3> vertices;
+  std::vector<int> face;
 
   Model(std::string path) : path(path) {};
   ~Model() {};
+
+  int nverts() const { return vertices.size(); }
+  int nfaces() const { return face.size() / 3; }
 
   int load() {
     std::string line;
@@ -32,25 +37,50 @@ public:
       words = this->split(line, ' ');
 
       if (words[0] == "v") {
-        std::array<double, 3> vertice = {
-            std::stod(words[1]), std::stod(words[2]), std::stod(words[3])};
+        vec3 vertice = {std::stod(words[1]), std::stod(words[2]),
+                        std::stod(words[3])};
 
         vertices.push_back(vertice);
 
       } else if (words[0] == "f") {
-        std::array<int, 3> face_index;
 
         for (unsigned int i = 1; i < words.size(); i++) {
           std::vector<std::string> values = this->split(words[i], '/');
-          face_index[i - 1] = std::stoi(values[0]) - 1;
+          face.push_back(std::stoi(values[0]) - 1);
         }
-
-        face.push_back(face_index);
       }
     };
 
+    std::vector<int> idx(
+        nfaces()); // permutation, a map from new to old facet indices
+    for (int i = 0; i < nfaces(); i++) // we start with the identity
+      idx[i] = i;
+
+    std::sort(idx.begin(), idx.end(),
+              [&](const int &a, const int &b) { // given two triangles, compare
+                                                // their min z coordinate
+                float aminz = std::min(vert(a, 0).z,
+                                       std::min(vert(a, 1).z, vert(a, 2).z));
+                float bminz = std::min(vert(b, 0).z,
+                                       std::min(vert(b, 1).z, vert(b, 2).z));
+                return aminz < bminz;
+              });
+
+    std::vector<int> facet_vrt2(
+        nfaces() * 3); // allocate an array to store permutated facets
+    for (int i = 0; i < nfaces(); i++) // for each (new) facet
+      for (int j = 0; j < 3; j++) // copy its three vertices from the old array
+        facet_vrt2[i * 3 + j] = face[idx[i] * 3 + j];
+
+    face = facet_vrt2;
+
     return 0;
   };
+
+  vec3 vert(const int i) const { return vertices[i]; }
+  vec3 vert(const int iface, const int nthvert) const {
+    return vertices[face[iface * 3 + nthvert]];
+  }
 
 private:
   void split(const std::string &s, char delim,
