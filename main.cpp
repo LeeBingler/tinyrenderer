@@ -10,8 +10,8 @@ constexpr TGAColor red = {0, 0, 255, 255};
 constexpr TGAColor blue = {255, 128, 64, 255};
 constexpr TGAColor yellow = {0, 200, 255, 255};
 
-constexpr int width = 800;
-constexpr int height = 800;
+constexpr int width = 64;
+constexpr int height = 64;
 
 void line(int ax, int ay, int bx, int by, TGAImage &framebuf, TGAColor color) {
   bool steep = std::abs(ax - bx) < std::abs(ay - by);
@@ -115,7 +115,9 @@ void writeFaces(char *file, TGAImage *framebuffer) {
 int main(int argc, char **argv) {
   TGAImage framebuffer(width, height, TGAImage::RGB);
 
-  writeFaces(argv[1], &framebuffer);
+  int ax = 17, ay = 4, az = 13;
+  int bx = 55, by = 39, bz = 128;
+  int cx = 23, cy = 59, cz = 255;
 
   framebuffer.write_tga_file("framebuffer.tga");
   return 0;
