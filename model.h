@@ -14,8 +14,8 @@
 class Model {
 public:
   std::string path;
-  std::vector<vec3> vertices;
-  std::vector<int> face;
+  std::vector<vec3> vertices = {};
+  std::vector<int> face = {};
 
   Model(std::string path) : path(path) {};
   ~Model() {};
