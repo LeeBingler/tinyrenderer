@@ -1,5 +1,7 @@
 #include "model.h"
 #include "our_gl.hpp"
+#include "tgaimage.h"
+#include <algorithm>
 
 constexpr TGAColor white = {255, 255, 255, 255}; // attention, BGRA order
 constexpr TGAColor green = {0, 255, 0, 255};
@@ -29,10 +31,42 @@ struct RandomShader : IShader {
   }
 };
 
+struct PhongShader : IShader {
+  const Model &model;
+  TGAColor color = {};
+  vec3 tri[3]; // triangle in eye coordinates
+  vec3 l;
+
+  PhongShader(const vec3 light, const Model &m) : model(m) {
+    l = normalized((ModelView * vec4{light.x, light.y, light.z, 0.}).xyz());
+  }
+
+  virtual vec4 vertex(const int face, const int vert) {
+    vec3 v = model.vert(face, vert); // current vertex in object coordinates
+    vec4 gl_Position = ModelView * vec4{v.x, v.y, v.z, 1.};
+    tri[vert] = gl_Position.xyz();    // in eye coordinates
+    return Perspective * gl_Position; // in clip coordinates
+  }
+
+  virtual std::pair<bool, TGAColor> fragment(const vec3 bar) const {
+    vec3 n = normalized(cross(tri[1] - tri[0], tri[2] - tri[0]));
+    vec3 r = normalized(n * (n * l) * 2 - l);
+
+    double ambient = 0.1;
+    double diffuse = n * l;
+    double specular = std::pow(std::max(0., r.z), 35);
+
+    for (int channel : {0, 1, 2})
+      color[channel] *= std::min(1., ambient + .4 * diffuse + .9 * specular);
+    return {false, color}; // do not discard the pixel
+  }
+};
+
 int main(int argc, char **argv) {
   constexpr int width = 800;
   constexpr int height = 800;
 
+  constexpr vec3 light{1, 1, 1};  // light source
   constexpr vec3 eye{-1, 0, 2};   // camera position
   constexpr vec3 center{0, 0, 0}; // camera direction
   constexpr vec3 up{0, 1, 0};     // camera up vector
@@ -48,7 +82,7 @@ int main(int argc, char **argv) {
   m.load();
 
   for (int f = 0; f < m.nfaces(); f++) {
-    RandomShader shader(m);
+    PhongShader shader(light, m);
     shader.color = {std::rand() % 255, std::rand() % 255, std::rand() % 255,
                     255};
     // assemble the primitive
