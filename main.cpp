@@ -33,7 +33,6 @@ struct RandomShader : IShader {
 
 struct PhongShader : IShader {
   const Model &model;
-  TGAColor color = {};
   vec3 tri[3]; // triangle in eye coordinates
   vec3 l;
 
@@ -49,11 +48,12 @@ struct PhongShader : IShader {
   }
 
   virtual std::pair<bool, TGAColor> fragment(const vec3 bar) const {
+    TGAColor color = {255, 255, 255, 255};
     vec3 n = normalized(cross(tri[1] - tri[0], tri[2] - tri[0]));
     vec3 r = normalized(n * (n * l) * 2 - l);
 
     double ambient = 0.1;
-    double diffuse = n * l;
+    double diffuse = std::max(0., n * l);
     double specular = std::pow(std::max(0., r.z), 35);
 
     for (int channel : {0, 1, 2})
@@ -83,8 +83,6 @@ int main(int argc, char **argv) {
 
   for (int f = 0; f < m.nfaces(); f++) {
     PhongShader shader(light, m);
-    shader.color = {std::rand() % 255, std::rand() % 255, std::rand() % 255,
-                    255};
     // assemble the primitive
     Triangle clip = {shader.vertex(f, 0), shader.vertex(f, 1),
                      shader.vertex(f, 2)};
