@@ -36,6 +36,7 @@ struct PhongShader : IShader {
   const Model &model;
   vec3 tri[3]; // triangle in eye coordinates
   vec3 l;
+  vec3 varying_nrm[3];
 
   PhongShader(const vec3 light, const Model &m) : model(m) {
     l = normalized((ModelView * vec4{light.x, light.y, light.z, 0.}).xyz());
@@ -43,6 +44,8 @@ struct PhongShader : IShader {
 
   virtual vec4 vertex(const int face, const int vert) {
     vec3 v = model.vert(face, vert); // current vertex in object coordinates
+    vec3 n = model.normal(face, vert);
+    varying_nrm[vert] = (ModelView * vec4{n.x, n.y, n.z, 0.}).xyz();
     vec4 gl_Position = ModelView * vec4{v.x, v.y, v.z, 1.};
     tri[vert] = gl_Position.xyz();    // in eye coordinates
     return Perspective * gl_Position; // in clip coordinates
@@ -50,7 +53,9 @@ struct PhongShader : IShader {
 
   virtual std::pair<bool, TGAColor> fragment(const vec3 bar) const {
     TGAColor color = {255, 255, 255, 255};
-    vec3 n = normalized(cross(tri[1] - tri[0], tri[2] - tri[0]));
+    // vec3 n = normalized(cross(tri[1] - tri[0], tri[2] - tri[0]));
+    vec3 n = normalized(varying_nrm[0] * bar[0] + varying_nrm[1] * bar[1] +
+                        varying_nrm[2] * bar[2]);
     vec3 r = normalized(n * (n * l) * 2 - l);
 
     double ambient = 0.1;
