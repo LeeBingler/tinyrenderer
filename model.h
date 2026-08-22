@@ -14,16 +14,21 @@
 class Model {
 public:
   std::string path;
+
   std::vector<vec3> vertices = {};
-  std::vector<int> face = {};
+  std::vector<int> facet_vertices = {};
+
   std::vector<vec3> normals = {};
   std::vector<int> facet_normals = {};
+
+  std::vector<vec2> uvs = {};
+  std::vector<int> facet_uvs = {};
 
   Model(std::string path) : path(path) {};
   ~Model() {};
 
   int nverts() const { return vertices.size(); }
-  int nfaces() const { return face.size() / 3; }
+  int nfaces() const { return facet_vertices.size() / 3; }
 
   int load() {
     std::string line;
@@ -51,11 +56,20 @@ public:
         vec3 norms = {std::stod(words[2]), std::stod(words[3]),
                       std::stod(words[4])};
 
-        normals.push_back(norms);
+        normals.push_back(normalized(norms));
+
+      } else if (words[0] == "vt") {
+        // TODO : Why is the vt line have a empty line at place 1 instead of the
+        // value???
+
+        vec2 uv = {std::stod(words[2]), std::stod(words[3])};
+
+        uvs.push_back(uv);
       } else if (words[0] == "f") {
         for (unsigned int i = 1; i < words.size(); i++) {
           std::vector<std::string> values = this->split(words[i], '/');
-          face.push_back(std::stoi(values[0]) - 1);
+          facet_vertices.push_back(std::stoi(values[0]) - 1);
+          facet_uvs.push_back(std::stoi(values[1]) - 1);
           facet_normals.push_back(std::stoi(values[2]) - 1);
         }
       }
@@ -67,11 +81,15 @@ public:
   vec3 vert(const int i) const { return vertices[i]; }
 
   vec3 vert(const int iface, const int nthvert) const {
-    return vertices[face[iface * 3 + nthvert]];
+    return vertices[facet_vertices[iface * 3 + nthvert]];
   }
 
   vec3 normal(const int iface, const int nthvert) const {
     return normals[facet_normals[iface * 3 + nthvert]];
+  }
+
+  vec2 uv(const int iface, const int nthvert) const {
+    return uvs[facet_uvs[iface * 3 + nthvert]];
   }
 
 private:
