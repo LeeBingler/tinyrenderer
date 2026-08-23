@@ -1,3 +1,4 @@
+#include "geometry.h"
 #include "model.h"
 #include "our_gl.hpp"
 #include "tgaimage.h"
@@ -34,7 +35,6 @@ struct RandomShader : IShader {
 
 struct PhongShader : IShader {
   const Model &model;
-  vec3 tri[3]; // triangle in eye coordinates
   vec4 l;
   vec3 varying_nrm[3];
   vec2 varying_uv[3];
@@ -56,18 +56,20 @@ struct PhongShader : IShader {
   }
 
   virtual std::pair<bool, TGAColor> fragment(const vec3 bar) const {
-    TGAColor color = {255, 255, 255, 255};
     vec2 uv = varying_uv[0] * bar[0] + varying_uv[1] * bar[1] +
               varying_uv[2] * bar[2];
     vec4 n = normalized(ModelView.invert_transpose() * model.normal(uv));
     vec4 r = normalized(n * (n * l) * 2 - l);
+    TGAColor color = sample2D(model.diffuse(), uv);
 
-    double ambient = 0.1;
+    double ambient = 0.4;
     double diffuse = std::max(0., n * l);
-    double specular = std::pow(std::max(0., r.z), 35);
+    double specular = (3. * sample2D(model.specular(), uv)[0] / 255.) *
+                      std::pow(std::max(r.z, 0.), 35);
 
     for (int channel : {0, 1, 2})
-      color[channel] *= std::min(1., ambient + .4 * diffuse + .9 * specular);
+      color[channel] =
+          std::min<int>(255, color[channel] * (ambient + diffuse + specular));
     return {false, color}; // do not discard the pixel
   }
 };

@@ -26,6 +26,8 @@ public:
   std::vector<int> facet_uvs = {};
 
   TGAImage normalmap = {};
+  TGAImage colormap = {};
+  TGAImage specularmap = {};
 
   int nverts() const { return vertices.size(); }
   int nfaces() const { return facet_vertices.size() / 3; }
@@ -81,6 +83,8 @@ public:
     };
 
     load_texture("_nm.tga", normalmap);
+    load_texture("_diffuse.tga", colormap);
+    load_texture("_spec.tga", specularmap);
     return 0;
   };
 
@@ -111,9 +115,19 @@ public:
            vec4{1, 1, 1, 0};
   }
 
+  vec4 color(const vec2 &uv) const {
+    TGAColor c =
+        colormap.get(uv[0] * colormap.width(), uv[1] * colormap.height());
+    return vec4{(double)c[2], (double)c[1], (double)c[0], 0} * 2. / 255. -
+           vec4{1, 1, 1, 0};
+  }
+
   vec2 uv(const int iface, const int nthvert) const {
     return uvs[facet_uvs[iface * 3 + nthvert]];
   }
+
+  const TGAImage &diffuse() const { return colormap; }
+  const TGAImage &specular() const { return specularmap; }
 
 private:
   void split(const std::string &s, char delim,
