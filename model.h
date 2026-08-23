@@ -1,6 +1,7 @@
 #pragma once
 
 #include "geometry.h"
+#include "tgaimage.h"
 #include <algorithm>
 #include <array>
 #include <cstdlib>
@@ -15,21 +16,25 @@ class Model {
 public:
   std::string path;
 
-  std::vector<vec3> vertices = {};
+  std::vector<vec4> vertices = {};
   std::vector<int> facet_vertices = {};
 
-  std::vector<vec3> normals = {};
+  std::vector<vec4> normals = {};
   std::vector<int> facet_normals = {};
 
   std::vector<vec2> uvs = {};
   std::vector<int> facet_uvs = {};
 
-  Model(std::string path) : path(path) {};
-  ~Model() {};
+  TGAImage normalmap = {};
 
   int nverts() const { return vertices.size(); }
   int nfaces() const { return facet_vertices.size() / 3; }
 
+  ~Model() {};
+  Model(std::string path)
+      : path(path) {
+
+        };
   int load() {
     std::string line;
     std::vector<std::string> words;
@@ -44,8 +49,8 @@ public:
       words = this->split(line, ' ');
 
       if (words[0] == "v") {
-        vec3 vertice = {std::stod(words[1]), std::stod(words[2]),
-                        std::stod(words[3])};
+        vec4 vertice = {std::stod(words[1]), std::stod(words[2]),
+                        std::stod(words[3]), 1};
 
         vertices.push_back(vertice);
 
@@ -53,8 +58,8 @@ public:
         // TODO : Why is the vn line have a empty line at place 1 instead of the
         // value???
 
-        vec3 norms = {std::stod(words[2]), std::stod(words[3]),
-                      std::stod(words[4])};
+        vec4 norms = {std::stod(words[2]), std::stod(words[3]),
+                      std::stod(words[4]), 1};
 
         normals.push_back(normalized(norms));
 
@@ -62,7 +67,7 @@ public:
         // TODO : Why is the vt line have a empty line at place 1 instead of the
         // value???
 
-        vec2 uv = {std::stod(words[2]), std::stod(words[3])};
+        vec2 uv = {std::stod(words[2]), 1 - std::stod(words[3])};
 
         uvs.push_back(uv);
       } else if (words[0] == "f") {
@@ -75,17 +80,36 @@ public:
       }
     };
 
+    load_texture("_nm.tga", normalmap);
+    normalmap.write_tga_file("yes.tga");
     return 0;
   };
 
-  vec3 vert(const int i) const { return vertices[i]; }
+  void load_texture(const std::string suffix, TGAImage &img) {
+    size_t dot = path.find_last_of(".");
+    if (dot == std::string::npos)
+      return;
+    std::string texfile = path.substr(0, dot) + suffix;
+    std::cerr << "texture file " << texfile << " loading "
+              << (img.read_tga_file(texfile.c_str()) ? "ok" : "failed")
+              << std::endl;
+  };
 
-  vec3 vert(const int iface, const int nthvert) const {
+  vec4 vert(const int i) const { return vertices[i]; }
+
+  vec4 vert(const int iface, const int nthvert) const {
     return vertices[facet_vertices[iface * 3 + nthvert]];
   }
 
-  vec3 normal(const int iface, const int nthvert) const {
+  vec4 normal(const int iface, const int nthvert) const {
     return normals[facet_normals[iface * 3 + nthvert]];
+  }
+
+  vec4 normal(const vec2 &uv) const {
+    TGAColor c =
+        normalmap.get(uv[0] * normalmap.width(), uv[1] * normalmap.height());
+    return vec4{(double)c[2], (double)c[1], (double)c[0], 0} * 2. / 255. -
+           vec4{1, 1, 1, 0};
   }
 
   vec2 uv(const int iface, const int nthvert) const {
