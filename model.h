@@ -81,7 +81,6 @@ public:
     };
 
     load_texture("_nm.tga", normalmap);
-    normalmap.write_tga_file("yes.tga");
     return 0;
   };
 
