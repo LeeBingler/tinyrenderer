@@ -26,7 +26,6 @@ public:
   std::vector<int> facet_uvs = {};
 
   TGAImage normalmap = {};
-  TGAImage normal_tangentmap = {};
   TGAImage colormap = {};
   TGAImage specularmap = {};
 
@@ -81,8 +80,7 @@ public:
       }
     };
 
-    load_texture("_nm.tga", normalmap);
-    load_texture("_nm_tangent.tga", normal_tangentmap);
+    load_texture("_nm_tangent.tga", normalmap);
     load_texture("_diffuse.tga", colormap);
     load_texture("_spec.tga", specularmap);
     return 0;
@@ -111,8 +109,9 @@ public:
   vec4 normal(const vec2 &uv) const {
     TGAColor c =
         normalmap.get(uv[0] * normalmap.width(), uv[1] * normalmap.height());
-    return vec4{(double)c[2], (double)c[1], (double)c[0], 0} * 2. / 255. -
-           vec4{1, 1, 1, 0};
+    return normalized(vec4{(double)c[2], (double)c[1], (double)c[0], 0} * 2. /
+                          255. -
+                      vec4{1, 1, 1, 0});
   }
 
   vec4 color(const vec2 &uv) const {
@@ -126,6 +125,7 @@ public:
     return uvs[facet_uvs[iface * 3 + nthvert]];
   }
 
+  const TGAImage &normal() const { return normalmap; }
   const TGAImage &diffuse() const { return colormap; }
   const TGAImage &specular() const { return specularmap; }
 

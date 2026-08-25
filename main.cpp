@@ -36,29 +36,37 @@ struct RandomShader : IShader {
 struct PhongShader : IShader {
   const Model &model;
   vec4 l;
-  vec3 varying_nrm[3];
   vec2 varying_uv[3];
+  vec4 varying_nrm[3];
+  vec4 tri[3]; // triangle in view coordinates
 
   PhongShader(const vec3 light, const Model &m) : model(m) {
     l = normalized((ModelView * vec4{light.x, light.y, light.z, 0.}));
   }
 
   virtual vec4 vertex(const int face, const int vert) {
-    /*
-    vec3 v = model.vert(face, vert); // current vertex in object coordinates
-    vec3 n = model.normal(face, vert);
-    tri[vert] = gl_Position.xyz();    // in eye coordinates
-    */
-
     varying_uv[vert] = model.uv(face, vert);
+    varying_nrm[vert] = ModelView.invert_transpose() * model.normal(face, vert);
     vec4 gl_Position = ModelView * model.vert(face, vert);
+    tri[vert] = gl_Position;
     return Perspective * gl_Position; // in clip coordinates
   }
 
   virtual std::pair<bool, TGAColor> fragment(const vec3 bar) const {
     vec2 uv = varying_uv[0] * bar[0] + varying_uv[1] * bar[1] +
               varying_uv[2] * bar[2];
-    vec4 n = normalized(ModelView.invert_transpose() * model.normal(uv));
+
+    mat<2, 4> E = {tri[1] - tri[0], tri[2] - tri[0]};
+    mat<2, 2> U = {varying_uv[1] - varying_uv[0],
+                   varying_uv[2] - varying_uv[0]};
+    mat<2, 4> T = U.invert() * E;
+    mat<4, 4> D = {normalized(T[0]),
+                   normalized(T[1]),
+                   normalized(varying_nrm[0] * bar[0] +
+                              varying_nrm[1] * bar[1] +
+                              varying_nrm[2] * bar[2]),
+                   {0, 0, 0, 1}};
+    vec4 n = normalized(D.transpose() * model.normal(uv));
     vec4 r = normalized(n * (n * l) * 2 - l);
     TGAColor color = sample2D(model.diffuse(), uv);
 
