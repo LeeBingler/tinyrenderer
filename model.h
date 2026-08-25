@@ -26,6 +26,7 @@ public:
   std::vector<int> facet_uvs = {};
 
   TGAImage normalmap = {};
+  TGAImage normal_tangentmap = {};
   TGAImage colormap = {};
   TGAImage specularmap = {};
 
@@ -33,10 +34,8 @@ public:
   int nfaces() const { return facet_vertices.size() / 3; }
 
   ~Model() {};
-  Model(std::string path)
-      : path(path) {
+  Model(std::string path) : path(path) {};
 
-        };
   int load() {
     std::string line;
     std::vector<std::string> words;
@@ -83,6 +82,7 @@ public:
     };
 
     load_texture("_nm.tga", normalmap);
+    load_texture("_nm_tangent.tga", normal_tangentmap);
     load_texture("_diffuse.tga", colormap);
     load_texture("_spec.tga", specularmap);
     return 0;
