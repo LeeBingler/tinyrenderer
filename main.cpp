@@ -11,12 +11,12 @@ constexpr TGAColor red = {0, 0, 255, 255};
 constexpr TGAColor blue = {255, 128, 64, 255};
 constexpr TGAColor yellow = {0, 200, 255, 255};
 
-extern mat<4, 4> ModelView, Perspective; // "OpenGL" state matrices and
-extern std::vector<double> zbuffer;      // the depth buffer
+extern mat<4, 4> ModelView, Perspective,
+    Viewport;                       // "OpenGL" state matrices and
+extern std::vector<double> zbuffer; // the depth buffer
 
 struct RandomShader : IShader {
   const Model &model;
-  TGAColor color = {255};
   vec3 tri[3]; // triangle in eye coordinates
 
   RandomShader(const vec3 light, const Model &m) : model(m) {}
@@ -29,7 +29,22 @@ struct RandomShader : IShader {
   }
 
   virtual std::pair<bool, TGAColor> fragment(const vec3 bar) const {
-    return {false, color}; // do not discard the pixel
+    return {false, white}; // do not discard the pixel
+  }
+};
+
+struct BlankShader : IShader {
+  const Model &model;
+
+  BlankShader(const Model &m) : model(m) {}
+
+  virtual vec4 vertex(const int face, const int vert) {
+    vec4 gl_Position = ModelView * model.vert(face, vert);
+    return Perspective * gl_Position; // in clip coordinates
+  }
+
+  virtual std::pair<bool, TGAColor> fragment(const vec3 bar) const {
+    return {false, white}; // do not discard the pixel
   }
 };
 
@@ -91,7 +106,7 @@ int main(int argc, char **argv) {
   constexpr vec3 center{0, 0, 0}; // camera direction
   constexpr vec3 up{0, 1, 0};     // camera up vector
 
-  lookat(eye, center, up);              // build the ModelView   matrix
+  lookat(eye, center, up);              // build the ModelView matrix
   init_perspective(norm(eye - center)); // build the Perspective matrix
   init_viewport(width / 16, height / 16, width * 7 / 8,
                 height * 7 / 8); // build the Viewport    matrix
@@ -110,6 +125,31 @@ int main(int argc, char **argv) {
       rasterize(clip, shader, framebuffer); // rasterize the primitive
     }
   }
+
+  // Shadow mapping
+  mat<4, 4> M = Viewport * Perspective * ModelView;
+  std::vector<double> zbuffer_copy = zbuffer;
+  lookat(light, center, up);            // build the ModelView matrix
+  init_perspective(norm(eye - center)); // build the Perspective matrix
+  init_viewport(width / 16, height / 16, width * 7 / 8,
+                height * 7 / 8); // build the Viewport    matrix
+  init_zbuffer(width, height);
+  TGAImage trash(width, height, TGAImage::GRAYSCALE);
+
+  for (int i = 1; i < argc; i++) {
+    Model m(argv[i]);
+    m.load();
+
+    for (int f = 0; f < m.nfaces(); f++) {
+      BlankShader shader(m);
+      // assemble the primitive
+      Triangle clip = {shader.vertex(f, 0), shader.vertex(f, 1),
+                       shader.vertex(f, 2)};
+      rasterize(clip, shader, trash); // rasterize the primitive
+    }
+  }
+  trash.write_tga_file("shadowmap_pov.tga");
+  mat<4, 4> N = Viewport * Perspective * ModelView;
 
   framebuffer.write_tga_file("framebuffer.tga");
   return 0;
