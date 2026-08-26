@@ -55,19 +55,13 @@ public:
         vertices.push_back(vertice);
 
       } else if (words[0] == "vn") {
-        // TODO : Why is the vn line have a empty line at place 1 instead of the
-        // value???
-
-        vec4 norms = {std::stod(words[2]), std::stod(words[3]),
-                      std::stod(words[4]), 1};
+        vec4 norms = {std::stod(words[1]), std::stod(words[2]),
+                      std::stod(words[3]), 1};
 
         normals.push_back(normalized(norms));
 
       } else if (words[0] == "vt") {
-        // TODO : Why is the vt line have a empty line at place 1 instead of the
-        // value???
-
-        vec2 uv = {std::stod(words[2]), 1 - std::stod(words[3])};
+        vec2 uv = {std::stod(words[1]), 1 - std::stod(words[2])};
 
         uvs.push_back(uv);
       } else if (words[0] == "f") {
@@ -135,7 +129,9 @@ private:
     std::stringstream ss(s);
     std::string item;
     while (getline(ss, item, delim)) {
-      elems.push_back(item);
+      if (!item.empty()) {
+        elems.push_back(item);
+      }
     }
   }
 

@@ -16,10 +16,10 @@ extern std::vector<double> zbuffer;      // the depth buffer
 
 struct RandomShader : IShader {
   const Model &model;
-  TGAColor color = {};
+  TGAColor color = {255};
   vec3 tri[3]; // triangle in eye coordinates
 
-  RandomShader(const Model &m) : model(m) {}
+  RandomShader(const vec3 light, const Model &m) : model(m) {}
 
   virtual vec4 vertex(const int face, const int vert) {
     vec4 v = model.vert(face, vert); // current vertex in object coordinates
@@ -99,7 +99,6 @@ int main(int argc, char **argv) {
   TGAImage framebuffer(width, height, TGAImage::RGB);
 
   for (int i = 1; i < argc; i++) {
-
     Model m(argv[i]);
     m.load();
 
