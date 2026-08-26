@@ -98,15 +98,18 @@ int main(int argc, char **argv) {
   init_zbuffer(width, height);
   TGAImage framebuffer(width, height, TGAImage::RGB);
 
-  Model m(argv[1]);
-  m.load();
+  for (int i = 1; i < argc; i++) {
 
-  for (int f = 0; f < m.nfaces(); f++) {
-    PhongShader shader(light, m);
-    // assemble the primitive
-    Triangle clip = {shader.vertex(f, 0), shader.vertex(f, 1),
-                     shader.vertex(f, 2)};
-    rasterize(clip, shader, framebuffer); // rasterize the primitive
+    Model m(argv[i]);
+    m.load();
+
+    for (int f = 0; f < m.nfaces(); f++) {
+      PhongShader shader(light, m);
+      // assemble the primitive
+      Triangle clip = {shader.vertex(f, 0), shader.vertex(f, 1),
+                       shader.vertex(f, 2)};
+      rasterize(clip, shader, framebuffer); // rasterize the primitive
+    }
   }
 
   framebuffer.write_tga_file("framebuffer.tga");
