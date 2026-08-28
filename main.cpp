@@ -100,8 +100,8 @@ struct PhongShader : IShader {
 int main(int argc, char **argv) {
   constexpr int width = 800;
   constexpr int height = 800;
-  constexpr int shadoww = 800;
-  constexpr int shadowh = 800;
+  constexpr int shadoww = 1600;
+  constexpr int shadowh = 1600;
 
   constexpr vec3 light{1, 1, 1};  // light source
   constexpr vec3 eye{-1, 0, 2};   // camera position
@@ -162,7 +162,7 @@ int main(int argc, char **argv) {
       vec<3> w = {a.x / a.w, a.y / a.w, a.z / a.w};
       bool lit = frag.z < -100 || w.x < 0 || w.x > shadoww || w.y < 0 ||
                  w.y > shadowh ||
-                 w.z > zbuffer[int(w.x) + int(w.y) * shadoww] - .03;
+                 w.z > zbuffer[int(w.x) + int(w.y) * shadoww] - .04;
 
       isLit[x + y * width] = lit;
     }
@@ -187,6 +187,8 @@ int main(int argc, char **argv) {
 
       TGAColor color = framebuffer.get(x, y);
       vec<3> a = {color[0], color[1], color[2]};
+      if (norm(a) < 80)
+        continue;
       a = normalized(a) * 80;
       framebuffer.set(x, y, {a[0], a[1], a[2], 255});
     }
