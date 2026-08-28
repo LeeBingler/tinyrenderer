@@ -151,7 +151,6 @@ int main(int argc, char **argv) {
     }
   }
 
-  trash.write_tga_file("light_pov.tga");
   mat<4, 4> N = Viewport * Perspective * ModelView;
   std::vector<bool> isLit(width * height, false);
 
@@ -169,15 +168,10 @@ int main(int argc, char **argv) {
   }
 
   // Test mask
-  TGAImage maskimg(width, height, TGAImage::GRAYSCALE);
-  for (int x = 0; x < width; x++) {
-    for (int y = 0; y < height; y++) {
-      if (isLit[x + y * width])
-        continue;
-      maskimg.set(x, y, {255, 255, 255, 255});
-    }
-  }
-  maskimg.write_tga_file("mask.tga");
+#ifdef test
+#include "test.hpp"
+  test_shadow_mask(width, height, trash, isLit);
+#endif
 
   // apply the shade
   for (double x = 0; x < width; x++) {

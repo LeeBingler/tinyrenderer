@@ -16,12 +16,12 @@ if(iwyu)
 endif()
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU|Intel")
-  add_compile_options(-Wall)
+  add_compile_options(-Wall -Wno-narrowing)
 endif()
 
 find_package(OpenMP COMPONENTS CXX)
 
-set(SOURCES main.cpp tgaimage.cpp our_gl.cpp)
+set(SOURCES main.cpp tgaimage.cpp our_gl.cpp test.cpp)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} PRIVATE $<$<BOOL:${OpenMP_CXX_FOUND}>:OpenMP::OpenMP_CXX>)
