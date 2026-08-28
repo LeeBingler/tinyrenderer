@@ -100,6 +100,8 @@ struct PhongShader : IShader {
 int main(int argc, char **argv) {
   constexpr int width = 800;
   constexpr int height = 800;
+  constexpr int shadoww = 800;
+  constexpr int shadowh = 800;
 
   constexpr vec3 light{1, 1, 1};  // light source
   constexpr vec3 eye{-1, 0, 2};   // camera position
@@ -131,10 +133,10 @@ int main(int argc, char **argv) {
   std::vector<double> zbuffer_copy = zbuffer;
   lookat(light, center, up);            // build the ModelView matrix
   init_perspective(norm(eye - center)); // build the Perspective matrix
-  init_viewport(width / 16, height / 16, width * 7 / 8,
-                height * 7 / 8); // build the Viewport    matrix
-  init_zbuffer(width, height);
-  TGAImage trash(width, height, TGAImage::GRAYSCALE);
+  init_viewport(shadoww / 16, shadowh / 16, shadoww * 7 / 8,
+                shadowh * 7 / 8); // build the Viewport    matrix
+  init_zbuffer(shadoww, shadowh);
+  TGAImage trash(shadoww, shadowh, TGAImage::GRAYSCALE);
 
   for (int i = 1; i < argc; i++) {
     Model m(argv[i]);
@@ -148,28 +150,42 @@ int main(int argc, char **argv) {
       rasterize(clip, shader, trash); // rasterize the primitive
     }
   }
+
   trash.write_tga_file("light_pov.tga");
   mat<4, 4> N = Viewport * Perspective * ModelView;
-  std::vector<bool> isLite(width * height, false);
+  std::vector<bool> isLit(width * height, false);
 
-  for (double x = 0; x < width; x++) {
-    for (double y = 0; y < height; y++) {
+  for (int x = 0; x < width; x++) {
+    for (int y = 0; y < height; y++) {
       vec<4> frag = M * vec<4>{x, y, zbuffer_copy[x + y * width], 1};
       vec<4> a = N * frag;
       vec<3> w = {a.x / a.w, a.y / a.w, a.z / a.w};
-      bool lite = (w.x < 0 || w.x > width) || (w.y < 0 || w.y > height) ||
-                  (w.z < 0) || (w.z > zbuffer[w.x + w.y * width]);
+      bool lit = frag.z < -100 || w.x < 0 || w.x > shadoww || w.y < 0 ||
+                 w.y > shadowh ||
+                 w.z > zbuffer[int(w.x) + int(w.y) * shadoww] - .03;
 
-      isLite[x + y * width] = lite;
+      isLit[x + y * width] = lit;
     }
   }
+
+  // Test mask
+  TGAImage maskimg(width, height, TGAImage::GRAYSCALE);
+  for (int x = 0; x < width; x++) {
+    for (int y = 0; y < height; y++) {
+      if (isLit[x + y * width])
+        continue;
+      maskimg.set(x, y, {255, 255, 255, 255});
+    }
+  }
+  maskimg.write_tga_file("mask.tga");
 
   // apply the shade
   for (double x = 0; x < width; x++) {
     for (double y = 0; y < height; y++) {
-      if (isLite[x + y * width])
+      if (isLit[x + y * width])
         continue;
-      TGAColor color = framebuffer.get(x, x);
+
+      TGAColor color = framebuffer.get(x, y);
       vec<3> a = {color[0], color[1], color[2]};
       a = normalized(a) * 80;
       framebuffer.set(x, y, {a[0], a[1], a[2], 255});
