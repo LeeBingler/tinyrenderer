@@ -127,7 +127,7 @@ int main(int argc, char **argv) {
   }
 
   // Shadow mapping
-  mat<4, 4> M = Viewport * Perspective * ModelView;
+  mat<4, 4> M = (Viewport * Perspective * ModelView).invert();
   std::vector<double> zbuffer_copy = zbuffer;
   lookat(light, center, up);            // build the ModelView matrix
   init_perspective(norm(eye - center)); // build the Perspective matrix
@@ -148,8 +148,33 @@ int main(int argc, char **argv) {
       rasterize(clip, shader, trash); // rasterize the primitive
     }
   }
-  trash.write_tga_file("shadowmap_pov.tga");
+  trash.write_tga_file("light_pov.tga");
   mat<4, 4> N = Viewport * Perspective * ModelView;
+  std::vector<bool> isLite(width * height, false);
+
+  for (double x = 0; x < width; x++) {
+    for (double y = 0; y < height; y++) {
+      vec<4> frag = M * vec<4>{x, y, zbuffer_copy[x + y * width], 1};
+      vec<4> a = N * frag;
+      vec<3> w = {a.x / a.w, a.y / a.w, a.z / a.w};
+      bool lite = (w.x < 0 || w.x > width) || (w.y < 0 || w.y > height) ||
+                  (w.z < 0) || (w.z > zbuffer[w.x + w.y * width]);
+
+      isLite[x + y * width] = lite;
+    }
+  }
+
+  // apply the shade
+  for (double x = 0; x < width; x++) {
+    for (double y = 0; y < height; y++) {
+      if (isLite[x + y * width])
+        continue;
+      TGAColor color = framebuffer.get(x, x);
+      vec<3> a = {color[0], color[1], color[2]};
+      a = normalized(a) * 80;
+      framebuffer.set(x, y, {a[0], a[1], a[2], 255});
+    }
+  }
 
   framebuffer.write_tga_file("framebuffer.tga");
   return 0;
