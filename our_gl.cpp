@@ -61,22 +61,24 @@ void rasterize(const Triangle &clip, const IShader &shader,
     // barycentric coordinates of {x,y} w.r.t the triangle
     for (int y = std::max<int>(bbminy, 0);
          y <= std::min<int>(bbmaxy, framebuffer.height() - 1); y++) {
-      vec3 bc = ABC.invert_transpose() *
-                vec3{static_cast<double>(x), static_cast<double>(y), 1.};
-
+      vec3 bc_screen = ABC.invert_transpose() *
+                       vec3{static_cast<double>(x), static_cast<double>(y), 1.};
+      vec3 bc_clip = {bc_screen.x / clip[0].w, bc_screen.y / clip[1].w,
+                      bc_screen.z / clip[2].w};
+      bc_clip = bc_clip / (bc_clip.x + bc_clip.y + bc_clip.z);
       // negative barycentric coordinate => the pixel is outside the triangle
-      if (bc.x < 0 || bc.y < 0 || bc.z < 0)
+      if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0)
         continue;
 
       // linear interpolation of the depth
-      double z = bc * vec3{ndc[0].z, ndc[1].z, ndc[2].z};
+      double z = bc_screen * vec3{ndc[0].z, ndc[1].z, ndc[2].z};
 
       // discard fragments that are too deep w.r.t the z-buffer
       if (z <= zbuffer[x + y * framebuffer.width()])
         continue;
 
       // fragment shader can discard current fragment
-      auto [discard, color] = shader.fragment(bc);
+      auto [discard, color] = shader.fragment(bc_clip);
       if (discard)
         continue;
 
