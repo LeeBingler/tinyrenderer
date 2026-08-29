@@ -41,7 +41,6 @@ std::vector<bool> make_shadowmap(int shadoww, int shadowh, vec3 position,
 
   mat<4, 4> N = Viewport * Perspective * ModelView;
   std::vector<bool> isLit(width * height, false);
-
   for (int x = 0; x < width; x++) {
     for (int y = 0; y < height; y++) {
       vec<4> frag = M * vec<4>{x, y, original_zbuffer[x + y * width], 1};
@@ -98,8 +97,9 @@ int main(int argc, char **argv) {
 #endif
 
   // apply the shade
-  for (double x = 0; x < width; x++) {
-    for (double y = 0; y < height; y++) {
+#pragma omp parallel for
+  for (int x = 0; x < width; x++) {
+    for (int y = 0; y < height; y++) {
       if (isLit[x + y * width])
         continue;
 
