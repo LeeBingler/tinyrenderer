@@ -3,55 +3,26 @@
 #include "our_gl.hpp"
 #include "shaders.hpp"
 #include "tgaimage.h"
+#include <vector>
 
-constexpr TGAColor white = {255, 255, 255, 255}; // attention, BGRA order
-constexpr TGAColor green = {0, 255, 0, 255};
-constexpr TGAColor red = {0, 0, 255, 255};
-constexpr TGAColor blue = {255, 128, 64, 255};
-constexpr TGAColor yellow = {0, 200, 255, 255};
+// "OpenGL" state matrices and the depth buffer
+extern mat<4, 4> ModelView, Perspective, Viewport;
+extern std::vector<double> zbuffer;
 
-extern mat<4, 4> ModelView, Perspective,
-    Viewport;                       // "OpenGL" state matrices and
-extern std::vector<double> zbuffer; // the depth buffer
+constexpr int width = 800;  // width of image render
+constexpr int height = 800; // height of image render
 
-int main(int argc, char **argv) {
-  constexpr int width = 800;
-  constexpr int height = 800;
-  constexpr int shadoww = 1600;
-  constexpr int shadowh = 1600;
+constexpr vec3 eye{-1, 0, 2};   // camera position
+constexpr vec3 center{0, 0, 0}; // camera direction
+constexpr vec3 up{0, 1, 0};     // camera up vector
 
-  constexpr vec3 light{1, 1, 1};  // light source
-  constexpr vec3 eye{-1, 0, 2};   // camera position
-  constexpr vec3 center{0, 0, 0}; // camera direction
-  constexpr vec3 up{0, 1, 0};     // camera up vector
+std::vector<bool> make_shadowmap(int shadoww, int shadowh, vec3 position,
+                                 int argc, char **argv, mat<4, 4> M,
+                                 std::vector<double> original_zbuffer) {
 
-  lookat(eye, center, up);              // build the ModelView matrix
+  lookat(position, center, up);         // build the ModelView matrix
   init_perspective(norm(eye - center)); // build the Perspective matrix
-  init_viewport(width / 16, height / 16, width * 7 / 8,
-                height * 7 / 8); // build the Viewport    matrix
-  init_zbuffer(width, height);
-  TGAImage framebuffer(width, height, TGAImage::RGB);
-
-  for (int i = 1; i < argc; i++) {
-    Model m(argv[i]);
-    m.load();
-
-    for (int f = 0; f < m.nfaces(); f++) {
-      PhongShader shader(light, m);
-      // assemble the primitive
-      Triangle clip = {shader.vertex(f, 0), shader.vertex(f, 1),
-                       shader.vertex(f, 2)};
-      rasterize(clip, shader, framebuffer); // rasterize the primitive
-    }
-  }
-
-  // Shadow mapping
-  mat<4, 4> M = (Viewport * Perspective * ModelView).invert();
-  std::vector<double> zbuffer_copy = zbuffer;
-  lookat(light, center, up);            // build the ModelView matrix
-  init_perspective(norm(eye - center)); // build the Perspective matrix
-  init_viewport(shadoww / 16, shadowh / 16, shadoww * 7 / 8,
-                shadowh * 7 / 8); // build the Viewport    matrix
+  init_viewport(shadoww / 16, shadowh / 16, shadoww * 7 / 8, shadowh * 7 / 8);
   init_zbuffer(shadoww, shadowh);
   TGAImage trash(shadoww, shadowh, TGAImage::GRAYSCALE);
 
@@ -73,7 +44,7 @@ int main(int argc, char **argv) {
 
   for (int x = 0; x < width; x++) {
     for (int y = 0; y < height; y++) {
-      vec<4> frag = M * vec<4>{x, y, zbuffer_copy[x + y * width], 1};
+      vec<4> frag = M * vec<4>{x, y, original_zbuffer[x + y * width], 1};
       vec<4> a = N * frag;
       vec<3> w = {a.x / a.w, a.y / a.w, a.z / a.w};
       bool lit = frag.z < -100 || w.x < 0 || w.x > shadoww || w.y < 0 ||
@@ -83,6 +54,42 @@ int main(int argc, char **argv) {
       isLit[x + y * width] = lit;
     }
   }
+
+  return isLit;
+}
+
+int main(int argc, char **argv) {
+  constexpr int shadoww = 1600;
+  constexpr int shadowh = 1600;
+
+  constexpr vec3 light{1, 1, 1}; // light source
+
+  // First pass
+  lookat(eye, center, up);
+  init_perspective(norm(eye - center));
+  init_viewport(width / 16, height / 16, width * 7 / 8, height * 7 / 8);
+  init_zbuffer(width, height);
+  TGAImage framebuffer(width, height, TGAImage::RGB);
+
+  for (int i = 1; i < argc; i++) {
+    Model m(argv[i]);
+    m.load();
+
+    for (int f = 0; f < m.nfaces(); f++) {
+      PhongShader shader(light, m);
+      // assemble the primitive
+      Triangle clip = {shader.vertex(f, 0), shader.vertex(f, 1),
+                       shader.vertex(f, 2)};
+      // rasterize the primitive
+      rasterize(clip, shader, framebuffer);
+    }
+  }
+
+  // Shadow mapping
+  mat<4, 4> M = (Viewport * Perspective * ModelView).invert();
+  std::vector<double> original_zbuffer = zbuffer;
+  std::vector<bool> isLit =
+      make_shadowmap(shadoww, shadowh, light, argc, argv, M, original_zbuffer);
 
   // Test mask
 #ifdef test
