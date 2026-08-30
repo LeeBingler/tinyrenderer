@@ -16,10 +16,8 @@ constexpr vec3 eye{-1, 0, 2};   // camera position
 constexpr vec3 center{0, 0, 0}; // camera direction
 constexpr vec3 up{0, 1, 0};     // camera up vector
 
-std::vector<bool> make_shadowmap(int shadoww, int shadowh, vec3 position,
-                                 int argc, char **argv, mat<4, 4> M,
-                                 std::vector<double> original_zbuffer) {
-
+mat<4, 4> make_zbuffer_matrix(int argc, char **argv, int shadoww, int shadowh,
+                              vec3 position) {
   lookat(position, center, up);         // build the ModelView matrix
   init_perspective(norm(eye - center)); // build the Perspective matrix
   init_viewport(shadoww / 16, shadowh / 16, shadoww * 7 / 8, shadowh * 7 / 8);
@@ -39,16 +37,22 @@ std::vector<bool> make_shadowmap(int shadoww, int shadowh, vec3 position,
     }
   }
 
-  mat<4, 4> N = Viewport * Perspective * ModelView;
-  std::vector<bool> isLit(width * height, false);
+  return Viewport * Perspective * ModelView; // Make the N matrix from lesson
+}
+
+std::vector<double> make_shadowmap(int shadoww, int shadowh, mat<4, 4> N,
+                                   int argc, char **argv, mat<4, 4> M,
+                                   std::vector<double> original_zbuffer) {
+  std::vector<double> isLit(width * height, false);
+
   for (int x = 0; x < width; x++) {
     for (int y = 0; y < height; y++) {
       vec<4> frag = M * vec<4>{x, y, original_zbuffer[x + y * width], 1};
       vec<4> a = N * frag;
       vec<3> w = {a.x / a.w, a.y / a.w, a.z / a.w};
-      bool lit = frag.z < -100 || w.x < 0 || w.x > shadoww || w.y < 0 ||
-                 w.y > shadowh ||
-                 w.z > zbuffer[int(w.x) + int(w.y) * shadoww] - .04;
+      float lit = frag.z < -100 || w.x < 0 || w.x > shadoww || w.y < 0 ||
+                  w.y > shadowh ||
+                  w.z > zbuffer[int(w.x) + int(w.y) * shadoww] - .04;
 
       isLit[x + y * width] = lit;
     }
@@ -84,11 +88,38 @@ int main(int argc, char **argv) {
     }
   }
 
-  // Shadow mapping
+  // Shadow mapping / AO
   mat<4, 4> M = (Viewport * Perspective * ModelView).invert();
   std::vector<double> original_zbuffer = zbuffer;
-  std::vector<bool> isLit =
-      make_shadowmap(shadoww, shadowh, light, argc, argv, M, original_zbuffer);
+  mat<4, 4> N = make_zbuffer_matrix(argc, argv, shadoww, shadowh, light);
+  std::vector<double> isLit =
+      make_shadowmap(shadoww, shadowh, N, argc, argv, M, original_zbuffer);
+  constexpr int n_pass = 1000;
+
+  for (int i = 0; i < n_pass; i++) {
+    double y = ((double)rand() / (RAND_MAX)) + 1;
+    double theta = 2.0 * M_PI * ((double)rand() / (RAND_MAX)) + 1;
+    double r = std::sqrt(1.0 - y * y);
+    vec3 position = vec3{r * std::cos(theta), y, r * std::sin(theta)} * 1.5;
+
+    N = make_zbuffer_matrix(argc, argv, shadoww, shadowh, position);
+    std::vector<double> cur_isLit =
+        make_shadowmap(shadoww, shadowh, N, argc, argv, M, original_zbuffer);
+
+    for (int x = 0; x < width; x++) {
+      for (int y = 0; y < height; y++) {
+        vec<4> frag = M * vec<4>{x, y, original_zbuffer[x + y * width], 1};
+        vec<4> a = N * frag;
+        vec<3> w = {a.x / a.w, a.y / a.w, a.z / a.w};
+        double lit = frag.z < -100 || w.x < 0 || w.x > shadoww || w.y < 0 ||
+                     w.y > shadowh ||
+                     w.z > zbuffer[int(w.x) + int(w.y) * shadoww] - .04;
+
+        // TODO: make an average of each pass for the isLit shadow map
+        isLit[x + y * width] = double;
+      }
+    }
+  }
 
   // Test mask
 #ifdef test
