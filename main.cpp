@@ -45,15 +45,15 @@ std::vector<double> make_shadowmap(int shadoww, int shadowh, mat<4, 4> N,
                                    std::vector<double> original_zbuffer) {
   std::vector<double> isLit(width * height, false);
 
+#pragma omp parallel for
   for (int x = 0; x < width; x++) {
     for (int y = 0; y < height; y++) {
       vec<4> frag = M * vec<4>{x, y, original_zbuffer[x + y * width], 1};
       vec<4> a = N * frag;
       vec<3> w = {a.x / a.w, a.y / a.w, a.z / a.w};
-      float lit = frag.z < -100 || w.x < 0 || w.x > shadoww || w.y < 0 ||
-                  w.y > shadowh ||
-                  w.z > zbuffer[int(w.x) + int(w.y) * shadoww] - .04;
-
+      double lit = frag.z < -100 || w.x < 0 || w.x > shadoww || w.y < 0 ||
+                   w.y > shadowh ||
+                   w.z > zbuffer[int(w.x) + int(w.y) * shadoww] - .04;
       isLit[x + y * width] = lit;
     }
   }
@@ -91,32 +91,42 @@ int main(int argc, char **argv) {
   // Shadow mapping / AO
   mat<4, 4> M = (Viewport * Perspective * ModelView).invert();
   std::vector<double> original_zbuffer = zbuffer;
-  mat<4, 4> N = make_zbuffer_matrix(argc, argv, shadoww, shadowh, light);
-  std::vector<double> isLit =
-      make_shadowmap(shadoww, shadowh, N, argc, argv, M, original_zbuffer);
-  constexpr int n_pass = 1000;
+  std::vector<double> isLit(width * height, 0.0);
+  constexpr int n_pass = 30;
+
+  auto smoothstep = [](double edge0, double edge1,
+                       double x) { // smoothstep returns 0 if the input is less
+                                   // than the left edge,
+    double t = std::clamp((x - edge0) / (edge1 - edge0), 0.,
+                          1.); // 1 if the input is greater than the right edge,
+    return t * t *
+           (3 - 2 * t); // Hermite interpolation inbetween. The derivative of
+                        // the smoothstep function is zero at both edges.
+  };
 
   for (int i = 0; i < n_pass; i++) {
-    double y = ((double)rand() / (RAND_MAX)) + 1;
-    double theta = 2.0 * M_PI * ((double)rand() / (RAND_MAX)) + 1;
+    double y = ((double)rand() / (RAND_MAX));
+    double theta = 2.0 * M_PI * ((double)rand() / (RAND_MAX));
     double r = std::sqrt(1.0 - y * y);
     vec3 position = vec3{r * std::cos(theta), y, r * std::sin(theta)} * 1.5;
 
-    N = make_zbuffer_matrix(argc, argv, shadoww, shadowh, position);
-    std::vector<double> cur_isLit =
-        make_shadowmap(shadoww, shadowh, N, argc, argv, M, original_zbuffer);
+    mat<4, 4> N = make_zbuffer_matrix(argc, argv, shadoww, shadowh, position);
 
+#pragma omp parallel for
     for (int x = 0; x < width; x++) {
       for (int y = 0; y < height; y++) {
         vec<4> frag = M * vec<4>{x, y, original_zbuffer[x + y * width], 1};
         vec<4> a = N * frag;
         vec<3> w = {a.x / a.w, a.y / a.w, a.z / a.w};
-        double lit = frag.z < -100 || w.x < 0 || w.x > shadoww || w.y < 0 ||
-                     w.y > shadowh ||
-                     w.z > zbuffer[int(w.x) + int(w.y) * shadoww] - .04;
 
-        // TODO: make an average of each pass for the isLit shadow map
-        isLit[x + y * width] = double;
+        double lit =
+            (frag.z < -100 || // it's the background or
+             (w.x >= 0 && w.x < shadoww && w.y >= 0 &&
+              w.y < shadowh && // it is not out of bounds of the shadow buffer
+              (w.z >
+               zbuffer[int(w.x) + int(w.y) * shadoww] - .03))); // it is visible
+
+        isLit[x + y * width] += (lit - isLit[x + y * width]) / (i + 1.);
       }
     }
   }
@@ -131,15 +141,9 @@ int main(int argc, char **argv) {
 #pragma omp parallel for
   for (int x = 0; x < width; x++) {
     for (int y = 0; y < height; y++) {
-      if (isLit[x + y * width])
-        continue;
-
-      TGAColor color = framebuffer.get(x, y);
-      vec<3> a = {color[0], color[1], color[2]};
-      if (norm(a) < 80)
-        continue;
-      a = normalized(a) * 80;
-      framebuffer.set(x, y, {a[0], a[1], a[2], 255});
+      double m = smoothstep(-1, 1, isLit[x + y * width]);
+      TGAColor c = framebuffer.get(x, y);
+      framebuffer.set(x, y, {c[0] * m, c[1] * m, c[2] * m, c[3]});
     }
   }
 

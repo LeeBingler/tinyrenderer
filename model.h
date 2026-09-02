@@ -85,9 +85,9 @@ public:
     if (dot == std::string::npos)
       return;
     std::string texfile = path.substr(0, dot) + suffix;
-    std::cerr << "texture file " << texfile << " loading "
-              << (img.read_tga_file(texfile.c_str()) ? "ok" : "failed")
-              << std::endl;
+    if (!img.read_tga_file(texfile.c_str())) {
+      std::cerr << "texture file " << texfile << " loading failed" << std::endl;
+    }
   };
 
   vec4 vert(const int i) const { return vertices[i]; }
