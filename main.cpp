@@ -3,14 +3,15 @@
 #include "our_gl.hpp"
 #include "shaders.hpp"
 #include "tgaimage.h"
+#include <random>
 #include <vector>
 
 // "OpenGL" state matrices and the depth buffer
 extern mat<4, 4> ModelView, Perspective, Viewport;
 extern std::vector<double> zbuffer;
 
-constexpr int width = 800;  // width of image render
-constexpr int height = 800; // height of image render
+constexpr int width = 1600;  // width of image render
+constexpr int height = 1600; // height of image render
 
 constexpr vec3 eye{-1, 0, 2};   // camera position
 constexpr vec3 center{0, 0, 0}; // camera direction
@@ -62,8 +63,8 @@ std::vector<double> make_shadowmap(int shadoww, int shadowh, mat<4, 4> N,
 }
 
 int main(int argc, char **argv) {
-  constexpr int shadoww = 1600;
-  constexpr int shadowh = 1600;
+  if (argc < 2)
+    return -1;
 
   constexpr vec3 light{1, 1, 1}; // light source
 
@@ -88,62 +89,52 @@ int main(int argc, char **argv) {
     }
   }
 
-  // Shadow mapping / AO
-  mat<4, 4> M = (Viewport * Perspective * ModelView).invert();
-  std::vector<double> original_zbuffer = zbuffer;
+  // SSAO
   std::vector<double> isLit(width * height, 0.0);
-  constexpr int n_pass = 30;
+  constexpr double ao_radius = .1;
+  constexpr int samples = 120;
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<double> dist(-ao_radius, ao_radius);
 
-  auto smoothstep = [](double edge0, double edge1,
-                       double x) { // smoothstep returns 0 if the input is less
-                                   // than the left edge,
-    double t = std::clamp((x - edge0) / (edge1 - edge0), 0.,
-                          1.); // 1 if the input is greater than the right edge,
-    return t * t *
-           (3 - 2 * t); // Hermite interpolation inbetween. The derivative of
-                        // the smoothstep function is zero at both edges.
+  // smoothstep returns 0 if the input is less than the left edge,
+  // 1 if the input is greater than the right edge,
+  // Hermite interpolation inbetween.
+  // The derivative of the smoothstep function is zero at both edges.
+  auto smoothstep = [](double edge0, double edge1, double x) {
+    double t = std::clamp((x - edge0) / (edge1 - edge0), 0., 1.);
+    return t * t * (3 - 2 * t);
   };
 
-  for (int i = 0; i < n_pass; i++) {
-    double y = ((double)rand() / (RAND_MAX));
-    double theta = 2.0 * M_PI * ((double)rand() / (RAND_MAX));
-    double r = std::sqrt(1.0 - y * y);
-    vec3 position = vec3{r * std::cos(theta), y, r * std::sin(theta)} * 1.5;
+  mat<4, 4> Viewport_inv = Viewport.invert();
 
-    mat<4, 4> N = make_zbuffer_matrix(argc, argv, shadoww, shadowh, position);
-
-#pragma omp parallel for
-    for (int x = 0; x < width; x++) {
-      for (int y = 0; y < height; y++) {
-        vec<4> frag = M * vec<4>{x, y, original_zbuffer[x + y * width], 1};
-        vec<4> a = N * frag;
-        vec<3> w = {a.x / a.w, a.y / a.w, a.z / a.w};
-
-        double lit =
-            (frag.z < -100 || // it's the background or
-             (w.x >= 0 && w.x < shadoww && w.y >= 0 &&
-              w.y < shadowh && // it is not out of bounds of the shadow buffer
-              (w.z >
-               zbuffer[int(w.x) + int(w.y) * shadoww] - .03))); // it is visible
-
-        isLit[x + y * width] += (lit - isLit[x + y * width]) / (i + 1.);
-      }
-    }
-  }
-
-  // Test mask
-#ifdef test
-#include "test.hpp"
-  test_shadow_mask(width, height, trash, isLit);
-#endif
-
-  // apply the shade
 #pragma omp parallel for
   for (int x = 0; x < width; x++) {
     for (int y = 0; y < height; y++) {
-      double m = smoothstep(-1, 1, isLit[x + y * width]);
+      double z = zbuffer[x + y * width];
+      vec<4> frag = Viewport_inv * vec<4>{x, y, z, 1};
+      double vote = 0;
+      double voters = 0;
+
+      for (int i = 0; i < samples; i++) {
+        vec4 p = Viewport * (frag + vec4{dist(gen), dist(gen), dist(gen), 0.});
+
+        if (p.x < 0 || p.x >= width || p.y < 0 || p.y >= height)
+          continue;
+
+        double d = zbuffer[int(p.x) + int(p.y) * width];
+
+        if (z + 5 * ao_radius < d)
+          continue;
+
+        voters++;
+        vote += d > p.z;
+      }
+
+      // apply the shade
+      double ssao = smoothstep(0, 1, 1 - vote / voters * .4);
       TGAColor c = framebuffer.get(x, y);
-      framebuffer.set(x, y, {c[0] * m, c[1] * m, c[2] * m, c[3]});
+      framebuffer.set(x, y, {c[0] * ssao, c[1] * ssao, c[2] * ssao, c[3]});
     }
   }
 
