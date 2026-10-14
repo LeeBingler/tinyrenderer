@@ -10,13 +10,7 @@ To do that we will be using the Bresenham algorithm. But first we will use the s
 For the simplest approach, we will simply interpolate a parameter `t` from 0 to 1 between 2 points and draw a pixel at each intermediate value.
 
 We define `t = [0,1]` and the 2D point `x(t), y(t)` :
-$$
-\left\{
-\begin{array}{l}
-    x(t)= a_x + t \cdot (b_x-a_x) \\
-    y(t)= a_y + t \cdot (b_y-a_y) \\
-\end{array}\right.
-$$
+$$\left\{\begin{array}{l}x(t)= a_x + t \cdot (b_x-a_x) \\y(t)= a_y + t \cdot (b_y-a_y) \\\end{array}\right$$
 If t = 0, then `x(t),y(t) = (ax,ay)` and if t = 1 then `x(t),y(t) = (bx,by)`.
 
 __Barycentric coordinates:__
@@ -103,7 +97,7 @@ https://haqr.eu/tinyrenderer/bresenham/#fourth-attempt-optimizations
 
 ### **First optimization:**
 It is purely mathematical, we change: 
-$$ y(t)= a_y + t \cdot (b_y-a_y) => y_0 = a_y, y_1 = y_0 + \frac{b_y-a_y}{b_x-a_x}, y_2 = y_1 + \frac{b_y-a_y}{b_x-a_x}$$
+$$y(t)= a_y + t \cdot (b_y-a_y) => y_0 = a_y, y_1 = y_0 + \frac{b_y-a_y}{b_x-a_x}, y_2 = y_1 + \frac{b_y-a_y}{b_x-a_x}$$
 ``` cpp
 void line(int ax, int ay, int bx, int by, TGAImage &framebuffer, TGAColor color) {
     bool steep = std::abs(ax-bx) < std::abs(ay-by);
@@ -471,12 +465,12 @@ If the area is negative, it means that the triangle is draw from right to left a
 
 ## 1D barycentric coordinates
 A barycentric coordinates for a 1D segment can be represented as:
-$$ P = \alpha A + \beta B $$
+$$P = \alpha A + \beta B$$
 If we place a weight of α kg to the point and β kg to the point , then the barycenter of the system will be situated in the point P. Note that the barycenter would not move if we put weights `13α` and `13β` instead of `α` and `β`. The usual way to eliminate this redundancy is to distribute 1kg in total:
-$$ \alpha + \beta = 1. $$
+$$\alpha + \beta = 1.$$
 
 To define `α` and `β` We have those 2 equations from above and if we solve them we got:
-$$ \alpha = \frac{B - P}{B - A}, \quad \beta = 1-\alpha = \frac{P - A}{B - A}. $$
+$$\alpha = \frac{B - P}{B - A}, \quad \beta = 1-\alpha = \frac{P - A}{B - A}.$$
 
 Example:
 ![](https://haqr.eu/tinyrenderer/barycentric/1d.png)
@@ -495,30 +489,23 @@ Let us sum up:
 ## 2D barycentric coordinates
 
 The principle is the same but we had another point to make a triangle in order to compute the barycenter coordinate in 2D space instead of 1D space:
-$$ P = \alpha A + \beta B + \gamma C $$
+$$P = \alpha A + \beta B + \gamma C$$
 And :
-$$ \alpha + \beta + \gamma = 1. $$
+$$\alpha + \beta + \gamma = 1.$$
 We compute the weight of the point P the same way as for the 1D exemple but we had another equation to the party to be able to get the weight for x-axis and y-axis:
-$$
-\left\{
-\begin{array}{ll}
-    \alpha A_x + \beta B_x + \gamma C_x &= P_x\\
-    \alpha A_y + \beta B_y + \gamma C_y &= P_y\\
-    \alpha + \beta + \gamma &= 1
-\end{array}\right. 
-$$
+$$\left\{\begin{array}{ll}\alpha A_x + \beta B_x + \gamma C_x &= P_x\\\alpha A_y + \beta B_y + \gamma C_y &= P_y\\\alpha + \beta + \gamma &= 1\end{array}\right.$$
 ### (Optional) how to solve this system 
 In order to solve this system we will use a matrix. (I won't be covering that as it is difficult and we won't be using that for the our coordinate)
 
 ### Pratical computation
 With the mathematical that I didnt cover, we see that the weight of each point is equal to:
-$$ \alpha = \frac{ \, \text{Area}(PBC) \, }{ \, \text{Area}(ABC) \, }. $$
+$$\alpha = \frac{ \, \text{Area}(PBC) \, }{ \, \text{Area}(ABC) \, }.$$
 Similarly:
-$$ \beta = \frac{ \, \text{Area}(PCA) \, }{ \, \text{Area}(ABC) \, }, \quad \gamma = \frac{ \, \text{Area}(PAB) \, }{ \, \text{Area}(ABC) \, }. $$
+$$\beta = \frac{ \, \text{Area}(PCA) \, }{ \, \text{Area}(ABC) \, }, \quad \gamma = \frac{ \, \text{Area}(PAB) \, }{ \, \text{Area}(ABC) \, }.$$
 
 
 To compute the area of each triangle, we will be using the [shoelace formula](https://en.wikipedia.org/wiki/Shoelace_formula), giving us this for our triangle:
-$$ \text{Area}(ABC) = \frac{1}{2} \left( \small(B_y-A_y)(B_x+A_x) + (C_y-B_y)(C_x+B_x) + (A_y-C_y)(A_x+C_x) \right). $$
+$$\text{Area}(ABC) = \frac{1}{2} \left( \small(B_y-A_y)(B_x+A_x) + (C_y-B_y)(C_x+B_x) + (A_y-C_y)(A_x+C_x) \right).$$
 
 The order of the point matter, as the formula gives the signed area.
 
@@ -535,40 +522,10 @@ The interpretation of the weights is very similar to the 1D case:
 I chose A,B,C points to have(16,0), (0,12), (0, 0) coordinates , respectively. 
 Then I took point P = (4,3).
 We then use the shoelace formula on each triangle and the main triangle.
-$$
-\text{Area}(ABC)=
-\frac12
-\begin{vmatrix}
-16 & 0  &0\\
-0  & 12 &0\\
-1  & 1  &1
-\end{vmatrix} = 96,
-\quad
-\text{Area}(PBC)=
-\frac12
-\begin{vmatrix}
- 4 & 0  &0\\
- 3 & 12 &0\\
- 1 & 1  &1
-\end{vmatrix} = 24
-$$
-$$ \text{Area}(PCA)=
-\frac12
-\begin{vmatrix}
- 4 & 0 & 16\\
- 3 & 0 & 0 \\
- 1 & 1 & 1
-\end{vmatrix} = 24,
-\quad
-\text{Area}(PAB)=
-\frac12
-\begin{vmatrix}
- 4 & 16 & 0\\
- 3 & 0  & 12 \\
- 1 & 1  &1
-\end{vmatrix} = 48$$
+$$\text{Area}(ABC)=\frac12\begin{vmatrix}16 & 0  &0\\0  & 12 &0\\1 & 1  &1\end{vmatrix} = 96,\quad\text{Area}(PBC)=\frac12\begin{vmatrix}4 & 0 &0\\3 & 12 &0\\1 & 1  &1\end{vmatrix} = 24$$
+$$\text{Area}(PCA)=\frac12\begin{vmatrix}4 & 0 & 16\\3 & 0 & 0 \\1 & 1 & 1\end{vmatrix} = 24,\quad\text{Area}(PAB)=\frac12\begin{vmatrix} 4 & 16 & 0\\ 3 & 0  & 12 \\ 1 & 1  &1\end{vmatrix} = 48$$
 By dividing these areas by the area of ABC, we obtain barycentric coordinates of the point P:
-$$ \alpha=\frac14,\quad \beta=\frac14,\quad\gamma=\frac12 $$
+$$\alpha=\frac14,\quad \beta=\frac14,\quad\gamma=\frac12$$
 
 Btw, the weight is attributed by the vector you left over, for the PCA area you are computing the weight Beta as B is left out. For PAB its Gamma as C is left out. And for PBC its alpha as A is left out.
 
@@ -644,16 +601,10 @@ We want to project the near point to the plan J which is the plane we will draw 
 For that we will use the Thales theorem to project the near point to the J plane.
 
 Knowing the camera point C = (10,0). We can project our point using this calcul:
-$$ \frac{(x, y)}{1 - \frac{x}{C}}. $$
+$$\frac{(x, y)}{1 - \frac{x}{C}}.$$
 
 Resulting in our new coordinate:
-$$ \begin{array}{l}
-\frac{(2, 0)}{1 - \frac{2}{10}} = \left(\frac{5}{2}, 0\right) \\
-\frac{(0, 2)}{1 - 0} = (0, 2) \\
-\frac{(-2, 2)}{1 + \frac{2}{10}} = \left(-\frac{5}{3}, \frac{5}{3}\right) \\
-\frac{(-2, -2)}{1 + \frac{2}{10}} = \left(-\frac{5}{3}, -\frac{5}{3}\right) \\
-\frac{(2, -2)}{1 - \frac{2}{10}} = \left(\frac{5}{2}, -\frac{5}{2}\right)
-\end{array} $$
+$$\begin{array}{l}\frac{(2, 0)}{1 - \frac{2}{10}} = \left(\frac{5}{2}, 0\right) \\\frac{(0, 2)}{1 - 0} = (0, 2) \\\frac{(-2, 2)}{1 + \frac{2}{10}} = \left(-\frac{5}{3}, \frac{5}{3}\right) \\\frac{(-2, -2)}{1 + \frac{2}{10}} = \left(-\frac{5}{3}, -\frac{5}{3}\right) \\\frac{(2, -2)}{1 - \frac{2}{10}} = \left(\frac{5}{2}, -\frac{5}{2}\right)\end{array}$$
 
 Here is the deformed object that will be render:
 ![](https://haqr.eu/tinyrenderer/camera-naive/persp2-b.svg)
@@ -693,34 +644,31 @@ If we change how we mesure the plan, we change the plan itself.
 If x become (0, -1) and y become (1, 0), then the whole plan will be turn by 90°. Because every point inside a plan is define by (x,y) and x is a mesure that can be change, then eveything can be change.
 
 To apply this linear transformation, we just multiply the matrix by a vector:
-$$ \begin{bmatrix}a&b\\c&d\end{bmatrix}\begin{bmatrix}x\\y\end{bmatrix} = \begin{bmatrix}ax+by\\cx+dy\end{bmatrix}.$$
+$$\begin{bmatrix}a&b\\c&d\end{bmatrix}\begin{bmatrix}x\\y\end{bmatrix} = \begin{bmatrix}ax+by\\cx+dy\end{bmatrix}.$$
 The matrix will represent (x,y) for this vector with x being the 1st row and y the 2nd.
 
 ## Affine transformation
 
 Affine transformation allow us to move (translate) point by a vector. We just need to add a vector to the coordinate of the point:
-$$ \begin{bmatrix}x\\y\end{bmatrix} \quad \mapsto \quad \begin{bmatrix}a&b\\c&d\end{bmatrix}\begin{bmatrix}x\\y\end{bmatrix} + \begin{bmatrix}e\\f\end{bmatrix} = \begin{bmatrix}ax+by+e\\cx+dy+f\end{bmatrix}
-$$
+$$\begin{bmatrix}x\\y\end{bmatrix} \quad \mapsto \quad \begin{bmatrix}a&b\\c&d\end{bmatrix}\begin{bmatrix}x\\y\end{bmatrix} + \begin{bmatrix}e\\f\end{bmatrix} = \begin{bmatrix}ax+by+e\\cx+dy+f\end{bmatrix}$$
 The matrix abcd is here only to show us that in order to do the affine and the linear transformation, we need to do 2 calculus and it become heavier each time we want to do more (like 5 time for the rendering pipeline).
 
 If we want to do 2 time the linear + affine transformation, the caculation become this:
-$$ \begin{bmatrix}x\\y\end{bmatrix} \quad \mapsto \quad \begin{bmatrix}a_2&b_2\\c_2&d_2\end{bmatrix}
-\left(\begin{bmatrix}a_1&b_1\\c_1&d_1\end{bmatrix}\begin{bmatrix}x\\y\end{bmatrix} + \begin{bmatrix}e_1\\f_1\end{bmatrix}\right)
-+\begin{bmatrix}e_2\\f_2\end{bmatrix} $$
+$$\begin{bmatrix}x\\y\end{bmatrix} \quad \mapsto \quad \begin{bmatrix}a_2&b_2\\c_2&d_2\end{bmatrix}
+\left(\begin{bmatrix}a_1&b_1\\c_1&d_1\end{bmatrix}\begin{bmatrix}x\\y\end{bmatrix} + \begin{bmatrix}e_1\\f_1\end{bmatrix}\right)+\begin{bmatrix}e_2\\f_2\end{bmatrix}$$
 
 We need to make it simpler for us and for the computer to be efficient
 ## Homogeneous Coordinates
 
 To do the Linear and the Affine transformation at the same time instead of doing it in two time (like the calculation above), we can add a columns to the matrix to put the affine transformation in this columns and doing everything in one matrix:
-$$ \begin{bmatrix}a&b&e\\c&d&f\\0&0&1\end{bmatrix}\begin{bmatrix}x\\y\\1\end{bmatrix} = \begin{bmatrix}ax+by+e\\cx+dy+f\\1\end{bmatrix}
-$$
+$$\begin{bmatrix}a&b&e\\c&d&f\\0&0&1\end{bmatrix}\begin{bmatrix}x\\y\\1\end{bmatrix} = \begin{bmatrix}ax+by+e\\cx+dy+f\\1\end{bmatrix}$$
 
 If we multiply this matrix and the vector augmented by 1 we get another vector with 1 in the last component, but the other two components have exactly the shape we would like!
 
 That's why we often use 3x3 matrix in 2D and 4x4 in 3D graphics.
 
 In fact, the idea is really simple. Translations are not linear in the 2D space. So we embed our 2D into 3D space (by simply adding 1 for the 3rd component). It means that our 2D space is the plane `Z = 1` in the 3D space. Then we perform a linear 3D transformation and project the result onto our 2D physical plane. How do we project 3D back onto the 2D plane? Simply by dividing by the third component:
-$$ \begin{bmatrix}x\\ y\\ z\end{bmatrix} \quad \mapsto \quad \begin{bmatrix}x/z \\ y/z\end{bmatrix}$$
+$$\begin{bmatrix}x\\ y\\ z\end{bmatrix} \quad \mapsto \quad \begin{bmatrix}x/z \\ y/z\end{bmatrix}$$
 
 Since z is always 1, we can just take x and y. But try not to do that as Z will not always be 1.
 
@@ -757,9 +705,7 @@ v.x + 1 = 2 → 2 * width/2 = width (the right edge)
 ```
 
 So if we take a point P with (x,y) coordinate, we end up with this matrix:
-$$ 
-\begin{bmatrix}\frac{width}{2}&0&0&x+\frac{width}{2} \\ 0&\frac{height}{2}&0&y+\frac{height}{2}\\ 0&0&1&0\\ 0 &0 &0&1\end{bmatrix}
-$$
+$$\begin{bmatrix}\frac{width}{2}&0&0&x+\frac{width}{2} \\ 0&\frac{height}{2}&0&y+\frac{height}{2}\\ 0&0&1&0\\ 0 &0 &0&1\end{bmatrix}$$
 
 We end up with this code:
 ``` cpp
@@ -788,13 +734,7 @@ vec3 persp(vec3 v) {
 We need to change it to a matrix in homogenous coordinates.
 
 For a 3D point (x,y,z), we embed it into 4D by adding 1 as the last coordinate (x,y,z,1): . Next, we multiply it with the perspective matrix, getting again a 4D point. Finally, we re-project (do not confond with the projection to the screen) the result to 3D by dividing by the last coordinate. Here is the computation flow for the above function:
-$$
-\begin{bmatrix}v_x \\ v_y \\ v_z \end{bmatrix} \quad \mapsto \quad
-\begin{bmatrix}1&0&0&0 \\ 0&1&0&0\\ 0&0&1&0\\ 0 &0 &-\frac{1}{f}&1\end{bmatrix}
-\begin{bmatrix}v_x \\ v_y \\ v_z \\ 1\end{bmatrix}=
-\begin{bmatrix}v_x \\ v_y \\ v_z \\ 1-\frac{v_z}{f}\end{bmatrix}
-\quad \mapsto \quad \frac{1}{ 1-\frac{v_z}{f}}\begin{bmatrix}v_x \\ v_y \\ v_z \end{bmatrix}
-$$
+$$\begin{bmatrix}v_x \\ v_y \\ v_z \end{bmatrix} \quad \mapsto \quad\begin{bmatrix}1&0&0&0 \\ 0&1&0&0\\ 0&0&1&0\\ 0 &0 &-\frac{1}{f}&1\end{bmatrix}\begin{bmatrix}v_x \\ v_y \\ v_z \\ 1\end{bmatrix}=\begin{bmatrix}v_x \\ v_y \\ v_z \\ 1-\frac{v_z}{f}\end{bmatrix}\quad \mapsto \quad \frac{1}{ 1-\frac{v_z}{f}}\begin{bmatrix}v_x \\ v_y \\ v_z \end{bmatrix}$$
 To setup the perspective matrix we just need to do this:
 ``` cpp
 void perspective(const double f) {
@@ -828,19 +768,13 @@ BTW, thecross product find the orthogonal axis to 2 vectors.
 #### Step 2 - change of basis (from xyz to lmn)
 To get a point P in view space, we just need this:
 ![](https://haqr.eu/tinyrenderer/camera/basis_change.svg)
-$$ \overrightarrow{OP} = \overrightarrow{OC} + \overrightarrow{CP} = 
-\begin{bmatrix}\vec{i} & \vec{j} & \vec{k}\end{bmatrix}
-\begin{bmatrix}C_x \\ C_y \\ C_z\end{bmatrix} + 
-\begin{bmatrix}\vec{l} & \vec{m} & \vec{n}\end{bmatrix} 
-\begin{bmatrix}x' \\ y' \\ z'\end{bmatrix}, $$
+$$\overrightarrow{OP} = \overrightarrow{OC} + \overrightarrow{CP} = \begin{bmatrix}\vec{i} & \vec{j} & \vec{k}\end{bmatrix}\begin{bmatrix}C_x \\ C_y \\ C_z\end{bmatrix} + \begin{bmatrix}\vec{l} & \vec{m} & \vec{n}\end{bmatrix} \begin{bmatrix}x' \\ y' \\ z'\end{bmatrix}$$
 
 To translate a pixel P to the good cordinate, we need to move it using the vector OP.
 And OP is OC in (i,j,k) coordinate + CP in (l,m,n) coordinate.
 
 After some math, we end up with this:
-$$ \begin{bmatrix}x' \\ y' \\ z'\end{bmatrix}  =
-M^{-1}\left( \begin{bmatrix}x \\ y \\ z\end{bmatrix} - \begin{bmatrix}C_x \\ C_y \\ C_z\end{bmatrix}\right).
-$$
+$$\begin{bmatrix}x' \\ y' \\ z'\end{bmatrix}  =M^{-1}\left( \begin{bmatrix}x \\ y \\ z\end{bmatrix} - \begin{bmatrix}C_x \\ C_y \\ C_z\end{bmatrix}\right).$$
 Where M is the matrix whose columns are l, m, n (expressed in world coordinates).
 
 Two things make this simple in practice:
@@ -850,17 +784,11 @@ Two things make this simple in practice:
 And because (l,m,n) is orthonormal (unit length, mutually perpendicular), M-1 is the transpose of M.
 Much cheaper to compute.
 
-$$
-M = \begin{bmatrix}\vec{l}_x & \vec{m}_x & \vec{n}_x \\ \vec{l}_y & \vec{m}_y & \vec{n}_y \\ \vec{l}_z & \vec{m}_z & \vec{n}_z \end{bmatrix} => M^{-1} = M^\top = \begin{bmatrix}\vec{l}_x & \vec{l}_y & \vec{l}_z \\ \vec{m}_x & \vec{m}_y & \vec{m}_z \\ \vec{n}_x & \vec{n}_y & \vec{n}_z \end{bmatrix} 
-$$
+$$M = \begin{bmatrix}\vec{l}_x & \vec{m}_x & \vec{n}_x \\ \vec{l}_y & \vec{m}_y & \vec{n}_y \\ \vec{l}_z & \vec{m}_z & \vec{n}_z \end{bmatrix} => M^{-1} = M^\top = \begin{bmatrix}\vec{l}_x & \vec{l}_y & \vec{l}_z \\ \vec{m}_x & \vec{m}_y & \vec{m}_z \\ \vec{n}_x & \vec{n}_y & \vec{n}_z \end{bmatrix}$$
 #### Step 3 - Assemble the 4x4 ModelView matrix
 
 Using homogenous coordinates, transkation and rotation combine into one matrix product:
-$$ \begin{bmatrix}x' \\ y' \\ z' \\ 1\end{bmatrix}  =
-\underbrace{\begin{bmatrix}\vec{l}_x & \vec{l}_y & \vec{l}_z & 0\\ \vec{m}_x & \vec{m}_y & \vec{m}_z & 0 \\ \vec{n}_x & \vec{n}_y & \vec{n}_z & 0 \\ 0 & 0 & 0 & 1\end{bmatrix}
-\begin{bmatrix}1 & 0 & 0 & -C_x\\ 0 & 1 & 0 & -C_y \\ 0 & 0 & 1 & -C_z \\ 0 & 0 & 0 & 1\end{bmatrix}}_{\text{ModelView}}
- \begin{bmatrix}x \\ y \\ z \\ 1\end{bmatrix}.
- $$
+$$\begin{bmatrix}x' \\ y' \\ z' \\ 1\end{bmatrix}  =\underbrace{\begin{bmatrix}\vec{l}_x & \vec{l}_y & \vec{l}_z & 0\\ \vec{m}_x & \vec{m}_y & \vec{m}_z & 0 \\ \vec{n}_x & \vec{n}_y & \vec{n}_z & 0 \\ 0 & 0 & 0 & 1\end{bmatrix}\begin{bmatrix}1 & 0 & 0 & -C_x\\ 0 & 1 & 0 & -C_y \\ 0 & 0 & 1 & -C_z \\ 0 & 0 & 0 & 1\end{bmatrix}}_{\text{ModelView}} \begin{bmatrix}x \\ y \\ z \\ 1\end{bmatrix}.$$
 The matrix on the left is the M-1 matrix and the matrix on the middle is the -C translation to go from model origin to center origin.
 
 Now we just need to multiply any coordinate by the ModelView to get the coordinate in the camera frame.
@@ -921,20 +849,17 @@ mat<3,3> ABC = {{ {screen[0].x, screen[0].y, 1.}, {screen[1].x, screen[1].y, 1.}
 
 To check whether a point P = (x, y) is inside triangle ABC and to get its weights (α, β, γ), you want to solve:
 
-$$ \alpha A + \beta B + \gamma C = P, \quad \alpha+\beta+\gamma = 1 $$
+$$\alpha A + \beta B + \gamma C = P, \quad \alpha+\beta+\gamma = 1$$
 
 If you write A, B, C, and P in the augmented (homogeneous 2D) form `(x, y, 1)`, this whole system becomes **one matrix equation**:
 
-$$
-\begin{bmatrix}A_x & B_x & C_x\\ A_y & B_y & C_y\\ 1 & 1 & 1\end{bmatrix}\begin{bmatrix}\alpha\\\beta\\\gamma\end{bmatrix} = \begin{bmatrix}P_x\\P_y\\1\end{bmatrix}
-$$​​
+$$\begin{bmatrix}A_x & B_x & C_x\\ A_y & B_y & C_y\\ 1 & 1 & 1\end{bmatrix}\begin{bmatrix}\alpha\\\beta\\\gamma\end{bmatrix} = \begin{bmatrix}P_x\\P_y\\1\end{bmatrix}$$​​
 
 That "1" row automatically encodes the constraint α+β+γ=1 — exactly the constraint you saw in [[#Example]]. Notice the matrix on the left has **columns** = A, B, C (each augmented with a 1).
 
 Now look at how `ABC` is actually built in code: its **rows** are `{Ax,Ay,1}`, `{Bx,By,1}`, `{Cx,Cy,1}`. That means `ABC` is the **transpose** of the matrix in the equation above. So the equation really being solved is:
 
-$$ \text{ABC}^\top \begin{bmatrix}\alpha\\\beta\\\gamma\end{bmatrix} = \begin{bmatrix}P_x\\P_y\\1\end{bmatrix} \quad\Longrightarrow\quad \begin{bmatrix}\alpha\\\beta\\\gamma\end{bmatrix} = (\text{ABC}^\top)^{-1}\begin{bmatrix}P_x\\P_y\\1\end{bmatrix}
-$$​​
+$$\text{ABC}^\top \begin{bmatrix}\alpha\\\beta\\\gamma\end{bmatrix} = \begin{bmatrix}P_x\\P_y\\1\end{bmatrix} \quad\Longrightarrow\quad \begin{bmatrix}\alpha\\\beta\\\gamma\end{bmatrix} = (\text{ABC}^\top)^{-1}\begin{bmatrix}P_x\\P_y\\1\end{bmatrix}$$​​
 
 And `(ABC⊤)−1 = (ABC−1)⊤` — the transpose of the inverse. That's precisely what `.invert_transpose()` computes. So this line, later in the pixel loop:
 
@@ -994,12 +919,10 @@ To check how much the surface is bright, we need to:
 2. Check how much there are align to return the brightness
 
 To calculate the normal, we just need to get the cross product of the edge:
-$$
-\vec n=\frac{\overrightarrow{AB} \times \overrightarrow{AC} }{||\overrightarrow{AB} \times \overrightarrow{AC}||}.
-$$
+$$\vec n=\frac{\overrightarrow{AB} \times \overrightarrow{AC} }{||\overrightarrow{AB} \times \overrightarrow{AC}||}.$$
 
 Then we can get the angle α between the vector l (toward the light) and the normal with this:
-$$ \cos \alpha = \vec n \cdot \vec l $$
+$$\cos \alpha = \vec n \cdot \vec l$$
 
 Here is an illustration:
 ![](https://haqr.eu/tinyrenderer/shading/vectors1.svg)
@@ -1021,14 +944,14 @@ To find the vector r (the reflection of the light) with vector n and vector l th
 $$ \vec r = 2\vec n (\vec n \cdot \vec l ) - \vec l $$
 
 Then we can just calculate the angle `β` like we calculate the angle α but with the viewer vector and the reflection vector:
-$$ \cos \beta = \vec r \cdot \vec v $$
+$$\cos \beta = \vec r \cdot \vec v$$
 
 A perfect mirror appears brightest if the viewer direction `v` exactly matched `r`. For non-perfectly-polished materials, the highlight should fade away as moves `v` away from `r`.
 
 To do this trick we will raise the cosine to a shininess exponent `e`.
 
 The specular term can be found as:
-$$ (\max(0, \cos \beta))^e $$
+$$(\max(0, \cos \beta))^e$$
 
 The more `e` is large, the more the highlight will be tight and bright.
 
@@ -1041,7 +964,7 @@ To make the triangle smoother instead of flat we need to interpolate the pixel b
 
 To do that we use the normal vector on each vector and we use the cubic Hermit spline making the pixel inside the triangle curve.
 
-![[curved-triangle.png]]
+<img width="1598" height="584" alt="curved-triangle" src="https://github.com/user-attachments/assets/14030eb9-72ec-4d81-92f3-52fc9e0c383b" />
 
 
 In the .obj format, the normal vector start with `vn`
@@ -1057,15 +980,14 @@ But in order to use those image we need to get the UVs of the object. UVs are 2D
 
 With those UVs we can get a color, a normal value and more for each pixel on the object.
 
-![[textures.png]]
-
+<img width="1772" height="1139" alt="textures" src="https://github.com/user-attachments/assets/e84bc041-c2a4-47c7-8047-6fe818508eae" />
 
 # Tangent  space normal mapping
 ## Global vs tangent space
 Normal mapping is a technique to have a normal value per pixel instead of per vertex without increasing the complexity of the model. We generally store the normal map as an image.
 
 But we have 2 type of normal map, the global-space normal (left) and the tangent-space normal (right):
-![[diablo-nm.jpg]]
+<img width="1024" height="512" alt="diablo-nm" src="https://github.com/user-attachments/assets/c89a45f7-b381-476e-ae70-6b2b43b2b5fb" />
 
 PROBLEM: Using global-space normal is bad because we can use the same normal UV for multiple part of the model. (left arm have the same normal as the right arm because they are the same).
 So the normal point in the same direction for the right and left arm but shouldn't.
@@ -1078,7 +1000,7 @@ The idea is that from the base of a texel, we draw a vector perpendicular from i
 It solve the problem cause the part that use multiple time the same UVs will not get the same normal as they don't have the same perpendicular vector at the start of the normal computation.
 
 To find the local point for the perpendicular vector, we draw a grid on the model and on each intersection of the blue and red line we make a normal vector:
-![[head-tbn.jpg]]
+<img width="1670" height="1085" alt="head-tbn" src="https://github.com/user-attachments/assets/fa451b37-38ea-40ef-8c8a-5bf52d841955" />
 
 ## Computing tangent frame
 To compute the tangent frame, for each vector we need 3 data:
@@ -1095,7 +1017,9 @@ The idea is to use the depth buffer 2 times :
 2. **Second pass (from the camera’s perspective):** The scene is rendered normally from the viewer’s position, but for each fragment we perform an extra check: we test whether the fragment is visible to the light or hidden in shadow.
 
 Here is a schematic view of the two spaces involved:
-![[spaces.jpg]]
+<img width="2135" height="688" alt="spaces" src="https://github.com/user-attachments/assets/0250d529-cf40-4bbb-aa08-7c933cb1b4d7" />
+
+
 To link the two passes, we keep track of both `Viewport * Perspective * ModelView` products. This allows us to transform any fragment seen from the camera back into the light’s screen space.
 
 Let us say we have a fragment `f = (i, j, z, 1)` in the camera’s screen-space coordinates. We can transform it back to object coordinates using `M^-1 f`, and then into the light’s screen-space coordinates using `NM^-1 f`, where is the camera transform and is the light transform. Let us say that `NM^-1 f = (wi', wj', wz', w)`. This gives us the coordinates of the fragment as the light “sees” it. We then compare the fragment’s depth `z'` in that space with the value stored in the shadow map at the coordinates `(i', j')`:
@@ -1105,7 +1029,8 @@ Let us say we have a fragment `f = (i, j, z, 1)` in the camera’s screen-space 
 
 By doing this for every fragment, we obtain a binary mask of hard shadows. In this way, shadow mapping introduces a **global visibility test** into the otherwise purely local Phong shading model.
 
-![[sum.jpg]]
+<img width="2400" height="800" alt="sum" src="https://github.com/user-attachments/assets/1bc7cc42-eb96-4d92-b48b-de09de4009ec" />
+
 
 # Perspective correction
 article from ssloy explanation : https://github.com/ssloy/tinyrenderer/wiki/Technical-difficulties:-linear-interpolation-with-perspective-deformations
@@ -1166,7 +1091,8 @@ A practical approximation is ambient occlusion (AO).
 
 To do that, we can do 1000 shadow map around a model to get as many shadow map possible. Then by averaging each point of the model in those shadow map, we can know how much this points is occluded by it's surrounding:
 
-![[samples.jpg]]
+<img width="1280" height="719" alt="samples" src="https://github.com/user-attachments/assets/2621be84-dbeb-46a8-bd9d-51ef74c7f18e" />
+
 
 
 ## Screen-space ambient occlusion
@@ -1175,10 +1101,11 @@ Making many shadow map only for AO is too expensive, so we invented SSAO.
 
 The idea is for each pixel, we take a sample of few point and compare there z-depth. If the sample point is behind then it contribute to the ambient shadowing. Then we average overt he samples to estimate how much the pixel is occluded.
 
-![[ssao.jpg]]
+<img width="800" height="800" alt="ssao" src="https://github.com/user-attachments/assets/e6c977cc-a154-43d1-9877-2754e0683ca9" />
+
 
 In this example, I consider the fragment shown in red, and generate 128 samples around it. Those in blue are occluded by the surface; the ratio of green points to 128 is my estimate of indirect lighting :)
 
 
-The main draw bakc of this technique is that it doesnt consider the model that arent render in the scene (ex: a blue screen behind the camera that make the scene a bit more blueish) .
+The main draw back of this technique is that it doesnt consider the model that arent render in the scene (ex: a blue screen behind the camera that make the scene a bit more blueish) .
 
